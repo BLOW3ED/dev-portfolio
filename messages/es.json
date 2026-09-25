@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Carlo — Ingeniero de IA que construye agentes y automatización para negocios reales",
+    "titleTemplate": "%s — Carlo",
+    "description": "Construyo agentes de IA y sistemas de automatización que corren en producción para negocios reales: agentes conversacionales en WhatsApp e Instagram, automatización de procesos y aplicaciones web full-stack.",
+    "ogTagline": "Agentes de IA y automatización que corren en producción",
+    "jobTitle": "Ingeniero de IA",
+    "caseStudy": "Caso de estudio"
+  },
+  "nav": {
+    "skipToContent": "Saltar al contenido",
+    "home": "Carlo — inicio",
+    "primary": "Principal",
+    "work": "Proyectos",
+    "services": "Servicios",
+    "process": "Proceso",
+    "about": "Sobre mí",
+    "contact": "Contacto",
+    "bookCall": "Agendar llamada",
+    "language": "Idioma",
+    "themeToggle": "Cambiar entre tema claro y oscuro",
+    "localeNames": {
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "hero": {
+    "name": "Carlo",
+    "headline": "Construyo agentes de IA y sistemas de automatización que corren en producción para negocios reales.",
+    "subline": "Ingeniero de IA · Co-founder de Ápice HQ · En México, trabajo remoto (GMT-6)",
+    "primaryCta": "Agendar llamada",
+    "secondaryCta": "Ver proyectos"
+  },
+  "work": {
+    "eyebrow": "Proyectos seleccionados",
+    "title": "Sistemas que corren para clientes reales — y el que uso yo mismo.",
+    "readCase": "Leer el caso",
+    "status": {
+      "production": "En producción",
+      "in-development": "En desarrollo"
+    },
+    "internal": "Herramienta interna",
+    "client": "Cliente",
+    "year": "Año",
+    "role": "Rol",
+    "statusLabel": "Estado",
+    "diagramLabel": "Flujo simplificado"
+  },
+  "moreProjects": {
+    "eyebrow": "Más proyectos",
+    "externalLink": "Visitar",
+    "items": [
+      {
+        "title": "Telas La Jalisciense",
+        "description": "Catálogo digital de telas con un modelo de datos tela → variante → fotos y un pipeline de imágenes.",
+        "tags": ["Next.js", "Supabase", "Pipeline de imágenes"],
+        "href": "[TODO: Carlo — link al catálogo, o borra esta línea; confirmar permiso del cliente]"
+      },
+      {
+        "title": "Pipeline de prospección",
+        "description": "Scraping de Google Maps con Apify y n8n para armar listas de prospección B2B local.",
+        "tags": ["Apify", "n8n", "Google Maps"],
+        "href": ""
+      }
+    ]
+  },
+  "services": {
+    "eyebrow": "Qué construyo",
+    "title": "Tres tipos de proyecto, un mismo estándar: corren en producción, con clientes reales.",
+    "items": [
+      {
+        "title": "Agentes conversacionales",
+        "channels": "WhatsApp · Instagram · Web",
+        "description": "Asistentes que responden dudas, califican prospectos y agendan citas con tu agenda, precios y políticas reales — conectados a los sistemas que ya usas, no un chatbot genérico."
+      },
+      {
+        "title": "Automatización e integraciones",
+        "channels": "n8n · APIs · Supabase",
+        "description": "Las herramientas que ya pagas, conectadas para que los datos se muevan solos: captura de prospectos, enriquecimiento, notificaciones y reportes — con logs y alertas para saber cuándo algo falla."
+      },
+      {
+        "title": "Aplicaciones web y SaaS full-stack",
+        "channels": "Next.js · Supabase · Multi-tenant",
+        "description": "Desde un sitio rápido que resuelve las dudas de tus clientes hasta un producto multi-tenant: modelo de datos, autenticación, permisos y una interfaz que la gente sí usa."
+      }
+    ]
+  },
+  "process": {
+    "eyebrow": "Cómo trabajo",
+    "title": "El monitoreo no es una fase al final. Sale con la primera versión.",
+    "steps": [
+      {
+        "title": "Descubrimiento",
+        "description": "Mapeamos el proceso, los sistemas involucrados y qué significa \"funcionar\" en números antes de construir nada."
+      },
+      {
+        "title": "Prototipo",
+        "description": "Una versión pequeña que funciona con tus datos reales, para decidir sobre algo que puedes probar — no sobre una presentación."
+      },
+      {
+        "title": "Producción, con QA y monitoreo",
+        "description": "Alertas de errores, logs y una revisión periódica de calidad desde el primer día. Los agentes fallan en silencio; hay que verlo antes que tus clientes.",
+        "highlight": true
+      },
+      {
+        "title": "Mantenimiento",
+        "description": "Sigo monitoreando, corrigiendo y mejorando el sistema conforme cambia tu negocio."
+      }
+    ],
+    "highlightHref": "/work/hanami#qa-y-monitoreo",
+    "highlightNote": "Mira cómo funcionó en el caso de Hanami."
+  },
+  "about": {
+    "eyebrow": "Sobre mí",
+    "title": "Hola, soy Carlo.",
+    "photoAlt": "Retrato de Carlo",
+    "bio": [
+      "Estudio Ingeniería en Inteligencia Artificial en la UPIIZ-IPN y soy co-founder de Ápice HQ, donde lidero Ápice Infra — la parte de infraestructura digital, automatización e IA de la empresa.",
+      "[TODO: Carlo — bio final: qué te interesa y qué tipo de problemas quieres resolver]"
+    ]
+  },
+  "contact": {
+    "eyebrow": "Contacto",
+    "title": "¿Tienes un proceso que debería correr solo?",
+    "description": "Cuéntame qué está frenando a tu equipo. En una llamada corta vemos si un agente o una automatización es la solución correcta — y si no lo es, te lo digo.",
+    "bookCall": "Agendar llamada",
+    "email": "Email",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "timezone": "Remoto desde México · GMT-6 · Español e inglés"
+  },
+  "case": {
+    "back": "Todos los proyectos",
+    "onThisPage": "En esta página",
+    "tldr": "TL;DR",
+    "decision": "Decisión",
+    "tradeoff": "Trade-off",
+    "stack": "Stack",
+    "metricPending": "Pendiente",
+    "diagramLoading": "Generando diagrama…",
+    "diagramError": "No se pudo generar el diagrama. Código fuente:",
+    "nextCase": "Siguiente caso",
+    "cta": {
+      "title": "¿Necesitas algo así?",
+      "body": "Cuéntame de tu proceso y te digo con honestidad si la solución es un agente, una automatización o ninguna de las dos.",
+      "button": "Agendar llamada"
+    }
+  },
+  "footer": {
+    "tagline": "Agentes de IA, automatización y web full-stack — hechos para correr en producción.",
+    "rights": "© {year} Carlo",
+    "source": "Hecho con Next.js, Tailwind CSS y MDX."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o cambió de lugar.",
+    "home": "Volver al inicio"
+  }
+}

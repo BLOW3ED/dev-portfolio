@@ -1,0 +1,317 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — the single place for colors, type and spacing.
+ * Dark is the default theme; `data-theme="light"` on <html> switches.
+ * Every text/background pair below is checked for WCAG AA (≥ 4.5:1).
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --bg-elev: #12151a;
+  --bg-sunken: #08090b;
+  --fg: #e6e8eb;
+  --fg-muted: #a3abb5;
+  --fg-subtle: #8a939e;
+  --border: #1f242b;
+  --border-strong: #2f363f;
+  --accent: #7ee2a8;
+  --accent-contrast: #06130c;
+  --warn: #f2c14e;
+  --grid-dot: rgb(255 255 255 / 0.06);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f7f4;
+  --bg-elev: #ffffff;
+  --bg-sunken: #eeeeea;
+  --fg: #101317;
+  --fg-muted: #4a525c;
+  --fg-subtle: #5c6570;
+  --border: #e2e2dd;
+  --border-strong: #cbcbc5;
+  --accent: #0b7a4b;
+  --accent-contrast: #ffffff;
+  --warn: #8a5a00;
+  --grid-dot: rgb(0 0 0 / 0.07);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-warn: var(--warn);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+@theme {
+  /* Layout */
+  --container-page: 72rem;
+  --container-prose: 44rem;
+  --spacing-gutter: 1rem;
+  --spacing-section: 6rem;
+
+  /* Type scale (mobile-first; headings grow with `md:` utilities) */
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--letter-spacing: 0.08em;
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.035em;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :target,
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dotted schematic background used behind diagrams. */
+@utility bg-schematic {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+@layer components {
+/* ---------------------------------------------------------------------------
+ * Visible placeholder for content Carlo still has to provide.
+ * ------------------------------------------------------------------------- */
+.todo {
+  display: inline;
+  padding: 0.05em 0.35em;
+  border: 1px dashed var(--warn);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ---------------------------------------------------------------------------
+ * Case-study prose. Written by hand instead of a typography plugin so it
+ * follows the tokens above.
+ * ------------------------------------------------------------------------- */
+.prose {
+  color: var(--fg-muted);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.prose > * + * {
+  margin-top: 1.25em;
+}
+
+.prose h2 {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.prose h2:first-child {
+  margin-top: 0;
+}
+
+.prose h3 {
+  margin-top: 2.25rem;
+  color: var(--fg);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.prose h2 + *,
+.prose h3 + * {
+  margin-top: 0.75rem;
+}
+
+.prose strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.prose a:hover {
+  color: var(--accent);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.25rem;
+}
+
+.prose ul {
+  list-style: none;
+}
+
+.prose ul > li {
+  position: relative;
+}
+
+.prose ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 0.8em;
+  width: 0.4rem;
+  height: 1px;
+  background: var(--fg-subtle);
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose li + li {
+  margin-top: 0.5em;
+}
+
+.prose code {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.prose pre {
+  overflow-x: auto;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+.prose pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.prose blockquote {
+  padding-left: 1rem;
+  border-left: 2px solid var(--accent);
+  color: var(--fg);
+}
+
+.prose hr {
+  border-color: var(--border);
+}
+
+  /* Numbered <Decision> cards */
+  .prose {
+    counter-reset: decision;
+  }
+
+  .decision {
+    counter-increment: decision;
+  }
+
+  .decision-number::before {
+    content: counter(decision, decimal-leading-zero);
+  }
+
+  /* <Stack> renders its markdown list as chips */
+  .prose .stack-list ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-left: 0;
+  }
+
+  .prose .stack-list li {
+    margin: 0;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .prose .stack-list li::before {
+    display: none;
+  }
+
+  /* Mermaid: nodes with `class X truth` mark the source of truth. */
+  .mermaid-figure .truth :is(rect, polygon, path, circle) {
+    stroke: var(--accent) !important;
+  }
+
+  .mermaid-figure .truth .nodeLabel {
+    color: var(--accent) !important;
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Carlo — AI engineer building agents and automation for real businesses",
+    "titleTemplate": "%s — Carlo",
+    "description": "I build AI agents and automation systems that run in production for real businesses: conversational agents on WhatsApp and Instagram, workflow automation and full-stack web apps.",
+    "ogTagline": "AI agents & automation that run in production",
+    "jobTitle": "AI engineer",
+    "caseStudy": "Case study"
+  },
+  "nav": {
+    "skipToContent": "Skip to content",
+    "home": "Carlo — home",
+    "primary": "Primary",
+    "work": "Work",
+    "services": "Services",
+    "process": "Process",
+    "about": "About",
+    "contact": "Contact",
+    "bookCall": "Book a call",
+    "language": "Language",
+    "themeToggle": "Toggle light and dark theme",
+    "localeNames": {
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "hero": {
+    "name": "Carlo",
+    "headline": "I build AI agents and automation systems that run in production for real businesses.",
+    "subline": "AI engineer · Co-founder of Ápice HQ · Based in Mexico, working remote (GMT-6)",
+    "primaryCta": "Book a call",
+    "secondaryCta": "See my work"
+  },
+  "work": {
+    "eyebrow": "Selected work",
+    "title": "Systems running for real clients — and the one I use myself.",
+    "readCase": "Read the case study",
+    "status": {
+      "production": "In production",
+      "in-development": "In development"
+    },
+    "internal": "Internal tool",
+    "client": "Client",
+    "year": "Year",
+    "role": "Role",
+    "statusLabel": "Status",
+    "diagramLabel": "Simplified flow"
+  },
+  "moreProjects": {
+    "eyebrow": "More projects",
+    "externalLink": "Visit",
+    "items": [
+      {
+        "title": "Telas La Jalisciense",
+        "description": "Digital fabric catalog with a fabric → variant → photo data model and an image pipeline.",
+        "tags": ["Next.js", "Supabase", "Image pipeline"],
+        "href": "[TODO: Carlo — link to the catalog, or remove this line; confirm client permission]"
+      },
+      {
+        "title": "Lead prospecting pipeline",
+        "description": "Google Maps scraping with Apify and n8n to build lists for local B2B prospecting.",
+        "tags": ["Apify", "n8n", "Google Maps"],
+        "href": ""
+      }
+    ]
+  },
+  "services": {
+    "eyebrow": "What I build",
+    "title": "Three kinds of projects, one standard: they run in production, with real customers.",
+    "items": [
+      {
+        "title": "Conversational agents",
+        "channels": "WhatsApp · Instagram · Web",
+        "description": "Assistants that answer questions, qualify leads and book appointments using your real calendar, prices and policies — connected to the systems you already use, not a generic chatbot."
+      },
+      {
+        "title": "Workflow automation & integrations",
+        "channels": "n8n · APIs · Supabase",
+        "description": "The tools you already pay for, connected so data moves on its own: lead capture, enrichment, notifications and reporting — with logs and alerts so you know when something breaks."
+      },
+      {
+        "title": "Full-stack web apps & SaaS",
+        "channels": "Next.js · Supabase · Multi-tenant",
+        "description": "From a fast site that answers your customers' questions to a multi-tenant product: data model, authentication, permissions and an interface people actually use."
+      }
+    ]
+  },
+  "process": {
+    "eyebrow": "How I work",
+    "title": "Monitoring isn't a phase at the end. It ships with the first release.",
+    "steps": [
+      {
+        "title": "Discovery",
+        "description": "We map the workflow, the systems involved and what \"working\" means in numbers before anything gets built."
+      },
+      {
+        "title": "Prototype",
+        "description": "A small working version on your real data, so decisions are made on something you can try — not on a slide."
+      },
+      {
+        "title": "Production, with QA & monitoring",
+        "description": "Error alerts, logs and a periodic QA review are built from day one. Agents fail in quiet ways; you need to see it before your customers do.",
+        "highlight": true
+      },
+      {
+        "title": "Maintenance",
+        "description": "I keep watching, fixing and improving the system as your business changes."
+      }
+    ],
+    "highlightHref": "/work/hanami#qa-and-monitoring",
+    "highlightNote": "See how this played out in the Hanami case study."
+  },
+  "about": {
+    "eyebrow": "About",
+    "title": "Hi, I'm Carlo.",
+    "photoAlt": "Portrait of Carlo",
+    "bio": [
+      "I'm an Artificial Intelligence Engineering student at UPIIZ-IPN and co-founder of Ápice HQ, where I lead Ápice Infra — the digital infrastructure, automation and AI side of the company.",
+      "[TODO: Carlo — final bio: what you're interested in and what kind of problems you want to work on next]"
+    ]
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "title": "Have a process that should run on its own?",
+    "description": "Tell me what's slowing your team down. On a short call we'll work out whether an agent or an automation is the right fix — and if it isn't, I'll say so.",
+    "bookCall": "Book a call",
+    "email": "Email",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "timezone": "Remote from Mexico · GMT-6 · English & Spanish"
+  },
+  "case": {
+    "back": "All work",
+    "onThisPage": "On this page",
+    "tldr": "TL;DR",
+    "decision": "Decision",
+    "tradeoff": "Trade-off",
+    "stack": "Stack",
+    "metricPending": "Pending",
+    "diagramLoading": "Rendering diagram…",
+    "diagramError": "The diagram couldn't be rendered. Source:",
+    "nextCase": "Next case study",
+    "cta": {
+      "title": "Need something like this?",
+      "body": "Tell me about your process and I'll tell you honestly whether an agent, an automation or neither is the right fix.",
+      "button": "Book a call"
+    }
+  },
+  "footer": {
+    "tagline": "AI agents, automation and full-stack web — built to run in production.",
+    "rights": "© {year} Carlo",
+    "source": "Built with Next.js, Tailwind CSS and MDX."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or moved.",
+    "home": "Back to home"
+  }
+}
