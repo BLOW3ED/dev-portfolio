@@ -46,11 +46,12 @@ git commit -am "…"   # deploy.sh publica el último commit, no cambios sueltos
 Qué hace, en orden — si cualquier paso falla, se detiene:
 
 1. En local: lint, tipos, placeholders y un build de prueba.
-2. Revisa que en el VPS existan `.env` (con `DOMAIN`) y la red `traefik-public`.
+2. Revisa la conexión SSH y que en el VPS existan `.env` (con `DOMAIN`) y la red `traefik-public`.
 3. Sube el último commit con `rsync --delete` (conserva el `.env`).
 4. Etiqueta la imagen actual como `portfolio-web:previous` y construye la nueva.
    Mientras tanto, el sitio actual sigue en línea.
-5. Levanta el contenedor nuevo y espera su `HEALTHCHECK`. Si no queda sano,
+5. Reemplaza el contenedor y espera su `HEALTHCHECK` (el sitio queda fuera
+   unos segundos en el cambio). Si el nuevo no arranca o no queda sano,
    **restaura la versión anterior solo**.
 6. Comprueba `https://carlo.apicehq.com/` y `/es`.
 

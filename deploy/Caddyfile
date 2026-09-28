@@ -13,8 +13,9 @@
 	reverse_proxy web:3000
 }
 
-# www → apex. Si DOMAIN es un subdominio o www no tiene registro DNS, borra
-# este bloque.
-www.{$DOMAIN} {
-	redir https://{$DOMAIN}{uri} permanent
-}
+# www → apex, sólo para un dominio raíz con registro DNS de www. Desactivado
+# porque DOMAIN es un subdominio: www.carlo.apicehq.com no existe, y Caddy
+# reintentaría sin fin su certificado.
+# www.{$DOMAIN} {
+# 	redir https://{$DOMAIN}{uri} permanent
+# }

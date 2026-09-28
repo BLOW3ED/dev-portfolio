@@ -11,8 +11,9 @@
 #
 # Sube el último COMMIT (git archive), no tu working tree: lo que se publica es
 # exactamente lo que está en git. La imagen se construye en el VPS; mientras
-# tanto el contenedor viejo sigue sirviendo, y si el nuevo no queda sano se
-# restaura el anterior.
+# tanto el contenedor viejo sigue sirviendo. El cambio de contenedor deja el
+# sitio fuera unos segundos (hasta el primer healthcheck), y si el nuevo no
+# arranca o no queda sano se restaura el anterior.
 
 set -euo pipefail
 
@@ -95,6 +96,11 @@ fi
 # ---------------------------------------------------------------------------
 
 echo "→ Revisando el VPS..."
+if ! remote true 2>/dev/null; then
+  echo "✗ No hay conexión SSH con $VPS_USER@$VPS_HOST (¿llave autorizada? ¿VPS encendido?)." >&2
+  echo "  Prueba: ssh $VPS_USER@$VPS_HOST" >&2
+  exit 1
+fi
 if ! remote "test -f '$REMOTE_DIR/.env'"; then
   cat >&2 <<EOF
 ✗ Falta $REMOTE_DIR/.env en el VPS. La primera vez:
@@ -130,12 +136,14 @@ rsync -az --delete --exclude ".env" \
 echo "→ Construyendo la imagen en el VPS (el sitio actual sigue en línea)..."
 remote "cd '$REMOTE_DIR' \
   && if docker image inspect $IMAGE:latest >/dev/null 2>&1; then docker tag $IMAGE:latest $IMAGE:previous; fi \
-  && docker compose build web \
-  && docker compose up -d web"
+  && docker compose build web"
 
-echo "→ Esperando a que el contenedor quede sano..."
-if ! wait_healthy; then
-  echo "✗ El contenedor nuevo no quedó sano." >&2
+# Si el build falla, el script se detiene arriba y el sitio actual ni se toca.
+# A partir de aquí el contenedor viejo se reemplaza: cualquier falla (al
+# arrancar o en el healthcheck) restaura la versión anterior.
+echo "→ Reemplazando el contenedor y esperando a que quede sano..."
+if ! remote "cd '$REMOTE_DIR' && docker compose up -d web" || ! wait_healthy; then
+  echo "✗ El contenedor nuevo no arrancó o no quedó sano." >&2
   remote "cd '$REMOTE_DIR' && docker compose logs --tail 50 web" >&2 || true
   rollback
   exit 1
