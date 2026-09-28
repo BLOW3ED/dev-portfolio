@@ -1,27 +1,27 @@
 ---
 title: "Ápice HQ"
 summary: "Two very different businesses under one brand — audiovisual production and digital infrastructure — and a site that sends each visitor down the right funnel before the first call."
-tags: ["Next.js", "Material UI", "Design system", "B2B"]
+tags: ["React", "Vite", "Design system", "Accessibility"]
 cover: ""
 order: 4
 status: "production"
 client: "Ápice HQ"
-year: "[TODO: Carlo]"
+year: "2026"
 role: "Web architecture, UI/UX design, conversion strategy"
-flow: ["apicehq.com", "Studio · Infra", "Division funnel", "Qualified lead"]
+flow: ["apicehq.com", "Filmmaking · Infra", "Division funnel", "Qualified lead"]
 ---
 
 <TLDR>
 
-- **What:** the website for [apicehq.com](https://apicehq.com): structure, design system and conversion strategy.
+- **What:** the website for [apicehq.com](https://apicehq.com): structure, design system, conversion strategy and the infrastructure it runs on.
 - **For:** Ápice HQ, the company I co-founded. I lead Ápice Infra.
-- **Result:** <Todo>Carlo — headline number, e.g. mobile PageSpeed or share of leads per division</Todo>
+- **Result:** one landing page and funnel per division, and a perfect Lighthouse score for accessibility, best practices and SEO on mobile — on a site with a 3D hero.
 
 </TLDR>
 
 ## Context
 
-Ápice combines two distinct businesses under one brand: audiovisual production (**Ápice Studio**) and digital infrastructure, automation and AI (**Ápice Infra**).
+Ápice combines two distinct businesses under one brand: audiovisual production (**Ápice Filmmaking**) and digital infrastructure, automation and AI (**Ápice Infra**).
 
 ## The problem
 
@@ -32,18 +32,19 @@ Communicate two lines of business without confusing the prospect. Someone lookin
 ```mermaid
 flowchart TB
   accTitle: apicehq.com structure
-  accDescr: A shared brand narrative on apicehq.com leads to one landing page per division, Ápice Studio and Ápice Infra. Each landing page has its own funnel, so every lead arrives already classified as production or software.
+  accDescr: A shared brand narrative on the home page leads to one landing page per division, Ápice Filmmaking and Ápice Infra. Each landing page has its own funnel ending in the contact form, so every lead arrives already classified as production or software.
 
-  HOME["apicehq.com<br/>shared brand narrative"] --> STUDIO["Ápice Studio<br/>landing"]
-  HOME --> INFRA["Ápice Infra<br/>landing"]
-  STUDIO --> L1["Lead: audiovisual production"]
+  HOME["apicehq.com<br/>shared brand narrative"] --> FILM["/filmmaking<br/>landing"]
+  HOME --> INFRA["/infra<br/>landing"]
+  FILM --> L1["Lead: audiovisual production"]
   INFRA --> L2["Lead: software · automation · AI"]
 ```
 
-- **Modular structure.** One landing page per division, each with its own funnel, tied together by a common brand narrative.
-- **Visual direction.** Editorial typography, high contrast and restrained transitions, on a custom design system.
-- **Accessibility.** Skip-to-content, an AA contrast hierarchy and semantic HTML.
-- **Performance.** Deferred loading for video and heavy images — the site carries a lot of audiovisual material.
+- **Modular structure.** One landing page per division, each with its own funnel, tied together by a common brand narrative and a shared contact page.
+- **Visual direction.** Editorial typography, high contrast and restrained motion, on a custom design system built with React, Tailwind and Radix primitives.
+- **Accessibility.** A skip-to-content link, visible focus rings that adapt to dark sections, ARIA on the navigation and mobile menu, a labeled contact form with a live status region, and `prefers-reduced-motion` respected across the site's animations.
+- **Performance on a heavy site.** The 3D hero is split into its own chunk and loaded lazily, and its render loop pauses whenever it scrolls out of view. Images get multi-width WebP sets, `loading="lazy"` below the fold, `fetchpriority="high"` on the one that decides the largest paint, and explicit dimensions so nothing shifts while loading. Code is split per route.
+- **Infrastructure.** A React single-page app where every route gets its own prerendered HTML file with its title, description and Open Graph tags, plus a preload of that route's code. It's served as static files by nginx behind Traefik on a VPS, with security headers, pre-compressed assets and self-hosted, cookieless analytics.
 
 ## Key decisions & trade-offs
 
@@ -59,30 +60,53 @@ Two divisions with different audiences need to look like one company. A shared s
 
 </Decision>
 
+<Decision title="Static files with a prerendered head per route, instead of a server" tradeoff="Page bodies render in the browser, so they depend on JavaScript; every content change needs a build and a deploy.">
+
+A marketing site doesn't need a server deciding anything per request. Google runs JavaScript, but the crawlers behind link previews on LinkedIn, WhatsApp, Slack and X don't — they only read the HTML — so each route ships its own file with its metadata already resolved. nginx serving static files is fast, cheap and hard to break.
+
+</Decision>
+
+<Decision title="Self-hosted analytics without cookies" tradeoff="One more service to run and back up.">
+
+Umami, on our own server, measures traffic without cookies or persistent identifiers — so the site needs no consent banner, and visitor data doesn't go to a third party.
+
+</Decision>
+
 ## The hard part
 
-**A production company's site is heavy by nature.** Video and large images are the product, but they can't be allowed to make the site slow. The approach: defer loading of video and heavy images so they don't compete with what the visitor needs first.
+**After a deploy, returning visitors could get a blank page.**
 
-<Todo>Carlo — technical details of the deferred loading (technique, formats, CDN)</Todo>
+**Why it happened.** Each route's `index.html` was served without a `Cache-Control` header. The deploy syncs files with `rsync`, which preserves modification times, so browsers applied heuristic caching and kept the old HTML. That old HTML pointed at JavaScript chunks with content hashes in their names — and the deploy's `--delete` had just removed them from the server. Old HTML, missing scripts: a blank page.
+
+**The fix.** Two cache policies, decided by path:
+
+- `/assets/` — content-hashed files whose name changes when their content does — are cached forever as `immutable`.
+- Everything else (each route's HTML, the 404 page, `robots.txt`, the sitemap) is `no-cache, must-revalidate`: the browser can keep a copy, but must check it's current on every visit.
+
+**The trap inside the fix.** In nginx, `add_header` isn't inherited by a `location` block that declares its own. Setting `Cache-Control` inside the two locations would have silently dropped every security header from exactly those responses — which is all of them. The policy is resolved with a `map` instead and emitted once at the server level, next to the security headers, so nothing is overridden.
 
 ## Results
 
 <Metrics>
-  <Metric label="PageSpeed Insights · mobile" value="[TODO: Carlo]" />
-  <Metric label="Leads per division" value="[TODO: Carlo]" />
-  <Metric label="Contact form conversion" value="[TODO: Carlo]" />
+  <Metric label="Lighthouse · Accessibility (mobile)" value="100 / 100" note="Lighthouse 13, 3 runs, September 2026." />
+  <Metric label="Lighthouse · Best Practices and SEO (mobile)" value="100 / 100" note="Same runs, both categories." />
+  <Metric label="Cumulative Layout Shift" value="0" note="Same runs — every image has explicit dimensions." />
 </Metrics>
 
 ## Stack
 
 <Stack>
 
-- Next.js
-- Material UI
-- Custom design system
+- React
+- TypeScript
+- Vite
+- React Router
+- Tailwind CSS · Radix
+- GSAP
+- three.js
+- nginx · Traefik
+- Umami
 
 </Stack>
-
-<Todo>Carlo — confirm the current stack and hosting/CDN</Todo>
 
 <CTA />

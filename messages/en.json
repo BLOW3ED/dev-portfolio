@@ -54,7 +54,7 @@
         "title": "Telas La Jalisciense",
         "description": "Digital fabric catalog with a fabric → variant → photo data model and an image pipeline.",
         "tags": ["Next.js", "Supabase", "Image pipeline"],
-        "href": "[TODO: Carlo — link to the catalog, or remove this line; confirm client permission]"
+        "href": ""
       },
       {
         "title": "Lead prospecting pipeline",
@@ -116,7 +116,7 @@
     "photoAlt": "Portrait of Carlo",
     "bio": [
       "I'm an Artificial Intelligence Engineering student at UPIIZ-IPN and co-founder of Ápice HQ, where I lead Ápice Infra — the digital infrastructure, automation and AI side of the company.",
-      "[TODO: Carlo — final bio: what you're interested in and what kind of problems you want to work on next]"
+      "What I care about is the part of AI that comes after the demo: agents that hold up with real customers, with code where a model shouldn't guess and alerts so failures don't stay silent. I also study the math underneath it — linear algebra, calculus, discrete math — and I like connecting it to what I build. Next, I want to keep building agents and automations for businesses that depend on them every day."
     ]
   },
   "contact": {
@@ -145,6 +145,9 @@
       "body": "Tell me about your process and I'll tell you honestly whether an agent, an automation or neither is the right fix.",
       "button": "Book a call"
     }
+  },
+  "cta": {
+    "emailMe": "Email me"
   },
   "footer": {
     "tagline": "AI agents, automation and full-stack web — built to run in production.",

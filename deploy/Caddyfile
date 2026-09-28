@@ -1,0 +1,20 @@
+# Sólo para deploy/compose.caddy.yml (VPS sin Traefik).
+# Caddy termina HTTPS (Let's Encrypt, renovación automática) y reenvía al
+# contenedor de Next.js. DOMAIN llega desde .env.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	reverse_proxy web:3000
+}
+
+# www → apex. Si DOMAIN es un subdominio o www no tiene registro DNS, borra
+# este bloque.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

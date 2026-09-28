@@ -54,7 +54,7 @@
         "title": "Telas La Jalisciense",
         "description": "Catálogo digital de telas con un modelo de datos tela → variante → fotos y un pipeline de imágenes.",
         "tags": ["Next.js", "Supabase", "Pipeline de imágenes"],
-        "href": "[TODO: Carlo — link al catálogo, o borra esta línea; confirmar permiso del cliente]"
+        "href": ""
       },
       {
         "title": "Pipeline de prospección",
@@ -116,7 +116,7 @@
     "photoAlt": "Retrato de Carlo",
     "bio": [
       "Estudio Ingeniería en Inteligencia Artificial en la UPIIZ-IPN y soy co-founder de Ápice HQ, donde lidero Ápice Infra — la parte de infraestructura digital, automatización e IA de la empresa.",
-      "[TODO: Carlo — bio final: qué te interesa y qué tipo de problemas quieres resolver]"
+      "Lo que me interesa es la parte de la IA que viene después del demo: agentes que aguantan con clientes reales, con código donde un modelo no debería adivinar y alertas para que las fallas no pasen en silencio. También estudio las matemáticas que hay debajo — álgebra lineal, cálculo, matemáticas discretas — y me gusta conectarlas con lo que construyo. Lo que sigue: seguir construyendo agentes y automatizaciones para negocios que dependen de ellos todos los días."
     ]
   },
   "contact": {
@@ -145,6 +145,9 @@
       "body": "Cuéntame de tu proceso y te digo con honestidad si la solución es un agente, una automatización o ninguna de las dos.",
       "button": "Agendar llamada"
     }
+  },
+  "cta": {
+    "emailMe": "Escríbeme"
   },
   "footer": {
     "tagline": "Agentes de IA, automatización y web full-stack — hechos para correr en producción.",

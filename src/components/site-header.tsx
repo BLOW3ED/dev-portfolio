@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/components/link";
-import { bookingLink } from "@/lib/links";
+import { primaryCta } from "@/lib/links";
 import { site } from "@/config/site";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -14,7 +14,8 @@ const NAV = ["work", "services", "process", "about", "contact"] as const;
 export async function SiteHeader() {
   const t = await getTranslations("nav");
   const tMeta = await getTranslations("meta");
-  const booking = bookingLink();
+  const tCta = await getTranslations("cta");
+  const cta = primaryCta();
   const locale = await getLocale();
   const locales = routing.locales.map((code) => ({
     code,
@@ -51,12 +52,8 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2">
           <LocaleSwitcher current={locale} locales={locales} label={t("language")} />
           <ThemeToggle label={t("themeToggle")} />
-          <ButtonLink
-            href={booking.href}
-            external={booking.external}
-            size="sm"
-          >
-            {t("bookCall")}
+          <ButtonLink href={cta.href} external={cta.external} size="sm">
+            {cta.kind === "email" ? tCta("emailMe") : t("bookCall")}
           </ButtonLink>
         </div>
       </Container>

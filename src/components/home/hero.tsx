@@ -1,11 +1,11 @@
 import { getTranslations } from "next-intl/server";
-import { bookingLink } from "@/lib/links";
+import { primaryCta } from "@/lib/links";
 import { ArrowIcon, ButtonLink } from "../button-link";
 import { Container } from "../container";
 
 export async function Hero() {
-  const t = await getTranslations("hero");
-  const booking = bookingLink();
+  const [t, tCta] = await Promise.all([getTranslations("hero"), getTranslations("cta")]);
+  const cta = primaryCta();
 
   return (
     <section aria-labelledby="hero-title" className="pt-16 pb-12 md:pt-28 md:pb-20">
@@ -24,9 +24,9 @@ export async function Hero() {
           {t("subline")}
         </p>
         <div className="mt-10 flex flex-wrap gap-3">
-          <ButtonLink href={booking.href} external={booking.external}>
-            {t("primaryCta")}
-            <ArrowIcon direction={booking.external ? "up-right" : "right"} />
+          <ButtonLink href={cta.href} external={cta.external}>
+            {cta.kind === "email" ? tCta("emailMe") : t("primaryCta")}
+            <ArrowIcon direction={cta.external ? "up-right" : "right"} />
           </ButtonLink>
           <ButtonLink href="#work" variant="secondary">
             {t("secondaryCta")}

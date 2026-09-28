@@ -7,8 +7,7 @@
  *
  * Runs automatically before `npm run build` (the "prebuild" script), so a
  * production build can't ship visible placeholders. To build anyway — e.g. a
- * preview deploy — set ALLOW_TODOS=1. Vercel preview deployments
- * (VERCEL_ENV=preview) are allowed automatically; production ones are not.
+ * local preview — set ALLOW_TODOS=1. The Docker image never sets it.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +16,8 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 const TARGETS = ["content", "messages", "src/config"];
 const EXTENSIONS = new Set([".mdx", ".md", ".json", ".ts", ".tsx"]);
 const PATTERN = /\[TODO\b|<Todo[\s>/]/;
+// Lines that talk about the placeholder syntax itself (docs, the prefix constant).
+const IGNORE = "check-todos: ignore";
 
 async function* walk(dir) {
   let entries;
@@ -37,7 +38,7 @@ for (const target of TARGETS) {
   for await (const file of walk(path.join(ROOT, target))) {
     const lines = (await readFile(file, "utf8")).split("\n");
     lines.forEach((line, index) => {
-      if (PATTERN.test(line)) {
+      if (PATTERN.test(line) && !line.includes(IGNORE)) {
         findings.push(`${path.relative(ROOT, file)}:${index + 1}  ${line.trim().slice(0, 140)}`);
       }
     });
@@ -45,8 +46,7 @@ for (const target of TARGETS) {
 }
 
 const reportOnly = process.argv.includes("--report");
-const allowed =
-  reportOnly || process.env.ALLOW_TODOS === "1" || process.env.VERCEL_ENV === "preview";
+const allowed = reportOnly || process.env.ALLOW_TODOS === "1";
 
 if (findings.length === 0) {
   console.log("✓ No content placeholders left.");
@@ -56,7 +56,7 @@ if (findings.length === 0) {
 const header = `${findings.length} content placeholder(s) still to fill in:`;
 if (allowed) {
   console.warn(`⚠ ${header}\n\n${findings.join("\n")}\n`);
-  if (!reportOnly) console.warn("Building anyway (ALLOW_TODOS=1 or Vercel preview).\n");
+  if (!reportOnly) console.warn("Building anyway (ALLOW_TODOS=1).\n");
   process.exit(0);
 }
 
