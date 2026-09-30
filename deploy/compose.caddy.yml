@@ -1,0 +1,35 @@
+# Alternativa para un VPS SIN reverse proxy: añade Caddy (HTTPS automático
+# con Let's Encrypt en los puertos 80/443). En el VPS de Hostinger no hace
+# falta: ahí ya corre Traefik y docker-compose.yml basta.
+#
+#   docker network create traefik-public   # una vez; el compose base la espera
+#   docker compose -f docker-compose.yml -f deploy/compose.caddy.yml up -d --build
+#
+# Las labels de Traefik del servicio web se ignoran si Traefik no existe.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Falta DOMAIN en .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - traefik-public
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  caddy_data:
+  caddy_config:

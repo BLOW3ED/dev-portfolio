@@ -12,7 +12,6 @@
     "todos": "node scripts/check-todos.mjs --report"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1",
     "geist": "^1.7.2",
     "gray-matter": "^4.0.3",
     "mermaid": "^11.17.2",

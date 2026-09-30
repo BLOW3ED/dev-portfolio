@@ -39,17 +39,18 @@ export function ButtonLink({
       </a>
     );
   }
-  if (href.startsWith("#")) {
+  if (href.startsWith("/")) {
     return (
-      <a href={href} className={classes}>
+      <Link href={href} className={classes}>
         {children}
-      </a>
+      </Link>
     );
   }
+  // #anchors and mailto: links
   return (
-    <Link href={href} className={classes}>
+    <a href={href} className={classes}>
       {children}
-    </Link>
+    </a>
   );
 }
 

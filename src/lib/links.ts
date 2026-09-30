@@ -1,18 +1,31 @@
-import { isTodo, site } from "@/config/site";
+import { isPlaceholder, isTodo, site } from "@/config/site";
 
-export type ResolvedLink = { href: string; external: boolean; pending: boolean };
+export type PrimaryCta = {
+  href: string;
+  external: boolean;
+  /** What the button does, which decides its label. */
+  kind: "booking" | "email" | "contact";
+};
 
 /**
- * Where "Book a call" points. Until the Calendly/Cal.com link exists it falls
- * back to the contact section, which shows the pending placeholders.
+ * Where the main call to action points: the booking link if there is one,
+ * otherwise an email, otherwise the contact section.
  */
-export function bookingLink(): ResolvedLink {
-  if (isTodo(site.links.booking)) {
-    return { href: "/#contact", external: false, pending: true };
+export function primaryCta(): PrimaryCta {
+  if (!isTodo(site.links.booking)) {
+    return { href: site.links.booking, external: true, kind: "booking" };
   }
-  return { href: site.links.booking, external: true, pending: false };
+  if (!isTodo(site.links.email)) {
+    return { href: `mailto:${site.links.email}`, external: false, kind: "email" };
+  }
+  return { href: "/#contact", external: false, kind: "contact" };
 }
 
+/**
+ * Contact rows to show. A link that isn't configured ("") is left out; one
+ * that still reads "[TODO…" stays visible so it's easy to spot in development
+ * (production builds refuse to run while any remain).
+ */
 export function contactLinks() {
   const { email, linkedin, github } = site.links;
   return [
@@ -34,7 +47,7 @@ export function contactLinks() {
       href: isTodo(github) ? null : github,
       display: prettyUrl(github),
     },
-  ];
+  ].filter((link) => link.href || isPlaceholder(link.value));
 }
 
 export function sameAsLinks(): string[] {

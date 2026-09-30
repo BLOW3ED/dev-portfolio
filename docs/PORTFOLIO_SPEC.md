@@ -34,8 +34,8 @@ Ambos se sirven con el mismo formato: casos de estudio con **arquitectura + deci
 - **MDX** para los casos de estudio (`/content/{locale}/work/*.mdx`)
 - **next-intl** para i18n
 - **Mermaid** (render en build o cliente) para diagramas de arquitectura dentro de los MDX
-- **Deploy:** Vercel
-- **Analytics:** Vercel Analytics o Plausible (sin cookies → sin banner)
+- **Deploy:** ~~Vercel~~ → VPS propio (Docker + Traefik) en `carlo.apicehq.com` — ver `docs/DEPLOY.md`
+- **Analytics:** Umami propio o Plausible (sin cookies → sin banner)
 - Sin CMS por ahora. Carlo edita los MDX directo.
 
 ## 5. Mapa del sitio
@@ -185,7 +185,7 @@ Cada tarjeta: título, 1 línea, tags, link externo si existe.
 5. **Traducción ES.**
 6. **SEO, OG images, analytics.**
 7. **QA:** Lighthouse, revisión móvil, links rotos, que no haya `[TODO]` visibles en producción (build falla si los hay en `NODE_ENV=production`).
-8. **Deploy a Vercel** + dominio.
+8. **Deploy al VPS** + dominio (`./deploy.sh`, ver `docs/DEPLOY.md`).
 
 ## 12. Lo que Carlo tiene que juntar antes de lanzar
 

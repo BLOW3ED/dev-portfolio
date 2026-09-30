@@ -1,107 +1,106 @@
 ---
 title: "Corebase"
-summary: "Arquitectura de una plataforma SaaS modular y multi-tenant en desarrollo — incluyendo 42 validaciones de permisos dispersas consolidadas en una sola capa de autorización."
-tags: ["TypeScript", "Next.js", "Supabase", "Multi-tenant"]
+summary: "Arquitectura de una plataforma multi-tenant en desarrollo — y cómo una verificación de owner copiada en 42 lugares se volvió reglas con nombre que un linter no deja volver a dispersar."
+tags: ["TypeScript", "Next.js", "PostgreSQL · Drizzle", "Multi-tenant"]
 cover: ""
 order: 3
 status: "in-development"
 client: "internal"
-year: "[TODO: Carlo]"
-flow: ["App Next.js", "Capa de autorización", "Workspaces", "Supabase"]
+year: "2026"
+flow: ["App Next.js", "Actor y guards", "Workspaces", "Postgres"]
 ---
-
-<Todo>Carlo — "Corebase" es nombre de trabajo; decidir si se publica con este nombre</Todo>
 
 <TLDR>
 
-- **Qué es:** una plataforma SaaS modular y multi-tenant hecha con TypeScript, Next.js y Supabase. Está en desarrollo; este es un caso de arquitectura, no el lanzamiento de un producto.
-- **Para quién:** la capa que convierte agentes verticales en un producto que muchos negocios pueden usar — empezando por salones, con [Hanami](/work/hanami) como prueba.
-- **Resultado:** un solo código base en vez de dos, y 42 validaciones de permisos dispersas consolidadas en una sola capa de autorización.
+- **Qué es:** una plataforma modular multi-tenant — bases, tablas, registros, vistas y páginas con co-edición en tiempo real — construida con Next.js, TypeScript, Drizzle y Postgres propio. Está en desarrollo; es un caso de arquitectura, no el lanzamiento de un producto.
+- **Para quién:** la capa que convierte agentes verticales en un producto que muchos negocios pueden usar. Las citas y solicitudes de color de [Hanami](/work/hanami) ya se están moviendo a ella desde Airtable.
+- **Resultado:** 18 server actions auditadas sin ninguna sin guard de autorización, y el bypass de owner convertido de código copiado a mano en una sola regla con nombre que el linter hace cumplir.
 
 </TLDR>
 
 ## Contexto
 
-Un agente hecho para un cliente, como HanamiBot, demuestra que la idea funciona. Ofrecerlo a muchos negocios es otro problema: tenants, cuentas, permisos, configuración y una interfaz que cada negocio pueda operar por su cuenta. Corebase es la capa de plataforma para eso.
+Un agente construido para un cliente, como HanamiBot, demuestra que la idea funciona. Ofrecerlo a muchos negocios es otro problema: tenants, cuentas, permisos, configuración y una interfaz que cada negocio pueda operar por su cuenta. Corebase es la capa de plataforma para eso.
 
 ## El problema
 
-Un despliegue a la medida por cliente no escala. La plataforma tiene que mantener aislados los datos de cada negocio, permitir que nuevos verticales se conecten sin crear apps nuevas y seguir siendo lo bastante pequeña para que la mantenga un equipo chico.
+Un despliegue a la medida por cliente no escala. La plataforma tiene que mantener aislados los datos de cada negocio, dejar que nuevas verticales se conecten sin crear apps nuevas y seguir siendo lo bastante pequeña para que la mantenga un equipo chico.
 
 ## Arquitectura
 
 ```mermaid
 flowchart TB
   accTitle: Arquitectura de Corebase (simplificada)
-  accDescr: La app en Next.js muestra una interfaz page-first. Cada validación de permisos pasa por una sola capa de autorización antes de llegar a los datos en Supabase, organizados por workspace, que es la frontera entre tenants. Los módulos verticales, empezando por el agente para salones, se conectan a las mismas páginas.
+  accDescr: Todo quien llama — un usuario con sesión, una API key, un enlace compartido o el propio sistema — se resuelve a un actor. Los services cargan el registro, derivan su workspace y le preguntan al núcleo de autorización antes de tocar datos en Postgres a través de Drizzle. Los workspaces son la frontera entre tenants. Las páginas son el contenedor universal de bases, tablas y vistas, y un servidor aparte de tiempo real maneja la co-edición.
 
-  UI["App Next.js<br/>interfaz page-first"] --> AUTHZ["Capa de autorización<br/>un solo punto para cada validación de permisos"]
-  MOD["Módulos verticales<br/>empezando por salones"] --> UI
-  AUTHZ --> DB[("Supabase · Postgres")]
+  CALLER["Quién llama<br/>usuarios · API keys · enlaces · n8n · MCP"] --> APP["App Next.js<br/>UI page-first · services"]
+  APP --> AUTHZ["Núcleo de autorización<br/>actor + guards"]
+  AUTHZ --> DB[("PostgreSQL 17 · Drizzle")]
   DB --- WS["Workspaces<br/>frontera entre tenants"]
+  APP --> RT["Servidor de tiempo real<br/>Yjs · Hocuspocus"]
+  APP --> FILES["Almacenamiento de archivos<br/>MinIO"]
 
   classDef truth stroke-width:1.5px
   class AUTHZ truth
 ```
 
-- **App en Next.js (TypeScript).** Una interfaz page-first al estilo de Notion.
-- **Capa de autorización.** El único lugar donde la plataforma decide quién puede hacer qué. Ver [la parte difícil](#la-parte-difícil).
-- **Supabase.** Postgres y autenticación.
-- **Workspaces.** La frontera entre tenants: cada negocio trabaja dentro de su propio workspace.
-- **Módulos verticales.** Funcionalidad específica por industria, empezando por salones.
-
-<Todo>Carlo — detalles del aislamiento multi-tenant: políticas RLS de Supabase y esquema de workspaces</Todo>
-
-<Todo>Carlo — capturas de pantalla</Todo>
+- **Actores.** Cada request se resuelve a un actor: un admin de la agencia, un usuario cliente con sus membresías de workspace, una API key, un enlace compartido o el sistema. Las reglas de autorización se escriben una sola vez contra ese modelo.
+- **Núcleo de autorización.** Guards como `requireWorkspaceAccess` y `requireStructureEditor` son la única forma en que un service llega a los datos. Ver [la parte difícil](#la-parte-difícil).
+- **Workspaces.** La frontera entre tenants. Los miembros tienen un rol — viewer, editor u owner — y los objetos pueden llevar permisos que los ocultan o los dejan en solo lectura.
+- **Page-first.** La página es el contenedor universal: bases, tablas y vistas viven dentro de páginas, y los permisos se heredan hacia abajo en el árbol de páginas.
+- **Tiempo real y archivos.** La co-edición corre en un servidor aparte con Yjs + Hocuspocus; los archivos van a MinIO.
+- **Integraciones.** API keys, webhooks, un servidor MCP y un nodo propio de n8n — el nodo es como los workflows de Hanami escriben en ella.
 
 ## Decisiones clave y trade-offs
 
-<Decision title="Consolidar: Corebase como tronco, Synaptic como donador de código congelado" tradeoff="El código útil de Synaptic hay que portarlo a mano, y Synaptic ya no recibe correcciones.">
+<Decision title="Consolidar: Corebase como único tronco" tradeoff="El código útil del proyecto anterior hay que portarlo a mano, y ese proyecto ya no recibe correcciones.">
 
-Un proyecto anterior, Synaptic, se traslapaba con Corebase. En lugar de mantener los dos, Corebase se volvió el único tronco y Synaptic quedó congelado: se toma código de ahí cuando hace falta y no se construye nada nuevo en él.
-
-</Decision>
-
-<Decision title="Arquitectura page-first, estilo Notion" tradeoff="Un modelo de página genérico es más difícil de diseñar de entrada que un conjunto de pantallas fijas.">
-
-Las páginas son la unidad principal del producto. La funcionalidad nueva llega como algo que vive dentro de una página, no como una sección nueva y separada de la app.
+Un proyecto anterior, Synaptic, se traslapaba con Corebase. En lugar de mantener ambos, Corebase se volvió el único tronco y Synaptic quedó congelado.
 
 </Decision>
 
-<Decision title="Aislamiento multi-tenant por workspace">
+<Decision title="Arquitectura page-first, estilo Notion" tradeoff="Un modelo genérico de páginas es más difícil de diseñar de entrada que un conjunto de pantallas fijas.">
 
-<Todo>Carlo — cómo se garantiza el aislamiento (RLS de Supabase, esquema de workspaces) y por qué</Todo>
+Las páginas son la unidad principal del producto. La funcionalidad nueva llega como algo que vive dentro de una página, no como una sección separada de la app — y los permisos siguen el árbol de páginas en vez de configurarse por pantalla.
+
+</Decision>
+
+<Decision title="Aislamiento entre tenants en la aplicación, no en políticas de la base" tradeoff="La base de datos no va a frenar una consulta que se salte los guards, así que los guards mismos necesitan auditorías, reglas de lint y pruebas.">
+
+Los services derivan el workspace del registro que cargan y validan al actor contra él antes de devolver nada. Un solo modelo de autorización cubre a todo quien llama — incluidas las API keys y los enlaces compartidos, que no son usuarios de la base de datos.
 
 </Decision>
 
 <Decision title="Móvil diferido hasta tener ingresos" tradeoff="Por ahora no hay app nativa; en el celular se usa la app web.">
 
-Hay una app en React Native / Expo planeada dentro del monorepo, pero duplicaría la superficie que construir y mantener. Espera hasta que la plataforma tenga ingresos — una decisión de negocio explícita, no un descuido.
+Una app en React Native / Expo duplicaría la superficie que construir y mantener. Espera hasta que la plataforma tenga ingresos — una decisión de negocio explícita, no un descuido.
 
 </Decision>
 
 ## La parte difícil
 
-**Los permisos estaban dispersos por todo el código: 42 llamadas separadas a `isOwner` e `isWorkspaceOwner`.**
+**Un predicado crudo respondía tres preguntas distintas.** Una auditoría de permisos encontró `isWorkspaceOwner` en 42 lugares del código, y el bypass de owner — "admin de la agencia o dueño del workspace" — escrito a mano en seis sitios, dos de ellos en la UI.
 
 **Por qué era un riesgo.**
 
-- Cada funcionalidad decidía por su cuenta quién podía hacer qué. Agregar una funcionalidad implicaba acordarse de poner la validación correcta — y nada fallaba si se te olvidaba.
-- Dos helpers con significados traslapados hacían fácil usar el equivocado: ¿dueño del recurso o dueño del workspace?
-- En una plataforma multi-tenant, una validación faltante no es un bug menor: es un negocio viendo los datos de otro.
-- Responder "¿quién puede hacer X?" implicaba leer 42 lugares del código.
+- Cada llamada en realidad preguntaba una de tres cosas: *¿esta persona es un cliente final sujeto a las reglas del portal?*, *¿puede operar el workspace?* o *¿qué nivel de acceso tiene este objeto para ella?* La misma función respondía las tres, así que leer el código no decía cuál se quería decir.
+- Una regla escrita a los dos lados de la frontera cliente/servidor se desincroniza. El día que pasa, la UI promete un control que el servidor no aplica.
+- En una plataforma multi-tenant, una verificación equivocada no es un bug menor: es un negocio viendo los datos de otro.
 
-**El diseño final.** Ahora cada validación pasa por una sola capa de autorización. Las funcionalidades hacen una sola pregunta — *¿este usuario puede hacer esta acción aquí?* — y la respuesta sale de un solo lugar que se puede leer, revisar y probar por separado.
+**El diseño final.**
 
-<Todo>Carlo — detalles del diseño final (API de la capa, cómo se modelan los roles, si se apoya en RLS)</Todo>
+1. **Cada pregunta recibió un nombre** en el núcleo de autorización: `isPortalSubject`, `isWorkspaceAdmin` y `effectiveObjectLevelFor`. Los seis bypasses escritos a mano se volvieron `isWorkspaceAdmin`.
+2. **Una regla de lint restringe el predicado crudo** a una lista permitida. Sumar un uso obliga a editar esa lista y justificarlo en el diff — la regla falla justo cuando alguien se olvida, que es lo que le faltaba al primer refactor.
+3. **Una prueba de humo HTTP cubre el único control al que ninguna prueba de service llegaba.** Su oráculo es el HTML renderizado, no el código de estado: la página hace streaming, así que la respuesta ya es `200` cuando se niega el acceso — una prueba que esperara `404` pasaría con el control abierto. Se comprobó saboteando el control a propósito.
 
 ## Resultados
 
-Corebase está en desarrollo, así que todavía no hay métricas de producción.
+Corebase está en desarrollo, así que todavía no hay métricas de producción. Esto es lo que dejaron el refactor y la auditoría:
 
 <Metrics>
-  <Metric label="Validaciones de permisos" value="42 → 1 capa" note="Llamadas dispersas a isOwner / isWorkspaceOwner consolidadas en una sola capa de autorización." />
-  <Metric label="Códigos base activos" value="2 → 1" note="Synaptic congelado como donador de código; Corebase es el único tronco." />
+  <Metric label="Server actions sin guard de autorización" value="0 de 18" note="Según la auditoría de permisos." />
+  <Metric label="Bypasses de owner escritos a mano" value="6 → 1 regla con nombre" note="Reemplazados por isWorkspaceAdmin; los usos nuevos del predicado crudo fallan el lint." />
+  <Metric label="Checks de humo de services tras el refactor" value="906 · 0 fallos" note="En 15 suites de humo, más 19/19 en la nueva prueba HTTP." />
 </Metrics>
 
 ## Stack
@@ -110,9 +109,14 @@ Corebase está en desarrollo, así que todavía no hay métricas de producción.
 
 - TypeScript
 - Next.js
-- Supabase
-- PostgreSQL
-- React Native · Expo (planeado)
+- React
+- PostgreSQL 17
+- Drizzle ORM
+- Yjs · Hocuspocus
+- BlockNote
+- MinIO
+- Tailwind CSS
+- MCP
 
 </Stack>
 

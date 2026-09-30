@@ -1,89 +1,90 @@
 ---
 title: "Hanami Hair Studio"
-summary: "One digital system for a hair salon: a fast site that answers the static questions, and a multi-agent booking assistant on WhatsApp and Instagram that handles the rest — running in production with QA and monitoring."
-tags: ["n8n", "Multi-agent", "RAG · pgvector", "WhatsApp · Instagram"]
+summary: "One digital system for a hair salon: a site that answers the static questions and sends every call to action into an Instagram DM, where a multi-agent assistant books, reschedules and cancels against the salon's real calendar."
+tags: ["n8n", "Multi-agent", "Gemini · RAG", "Instagram"]
 cover: ""
 order: 1
 status: "production"
 client: "Hanami Hair Studio"
-year: "[TODO: Carlo]"
+year: "2025–2026"
 role: "UI/UX design, frontend, local SEO, bot architecture & implementation"
-flow: ["WhatsApp · Instagram", "Router", "Specialist agents", "RAG · Calendar"]
+flow: ["Instagram DM", "Intent router", "Specialist agents", "Calendar · RAG"]
 ---
-
-<Todo>Carlo — confirm Hanami agrees to appear by name and with screenshots</Todo>
 
 <TLDR>
 
-- **What:** a website (hanamihairstudio.com) and a booking agent (HanamiBot), designed as one system.
+- **What:** a website (hanamihairstudio.com) and a booking assistant on Instagram (HanamiBot), designed as one system.
 - **For:** Hanami Hair Studio, a salon in the historic center of Zacatecas, Mexico, and a real Ápice client.
-- **Result:** <Todo>Carlo — headline number, e.g. bookings made by the bot per month or % of conversations resolved without a human</Todo>
+- **Result:** 223 appointments booked by the bot in under eight months, 91% of them confirmed — and, by the salon's estimate, an average ticket 40–60% higher because the assistant always offers the upgrade the owner had no time to offer.
 
 </TLDR>
 
 ## Context
 
-Hanami is a hair salon in the historic center of Zacatecas with a clear philosophy: natural, inclusive styling. Clients discover it on Instagram and arrive on their phones — first to look, then to ask by DM or WhatsApp.
+Hanami is a hair salon in the historic center of Zacatecas with a clear philosophy: natural, inclusive styling. Clients discover it on Instagram and arrive on their phones — first to look, then to ask by DM.
+
+Its owner, Eli, is the stylist and the only person running the business. She can't split herself in two.
 
 ## The problem
 
-<Todo>Carlo — message volume, response time before the bot, missed appointments and load on the front desk</Todo>
+While her hands were busy with one client, messages piled up on Instagram — twenty at a time was normal. When the workday ended, a second one started: one or two hours answering questions, looking for gaps in the calendar and coordinating dates. Sundays, her only day off, turned into three or four hours of catching up.
 
-Most conversations started with the same questions — prices, how long a session takes, what's needed before a color service, the deposit — before reaching the one that matters: *is there a slot?*
+The cost was real: clients lost to slow replies, the same exhausting weekend every week, and a calendar that only moved when she moved it. And with forty unanswered messages, there's no time to suggest anything extra — you close the sale as fast as you can and move on.
 
-A generic chatbot wasn't enough. Answers had to match the salon's real prices and policies, and availability had to match the real calendar. In booking, a wrong answer is worse than no answer: a client who shows up for a slot that doesn't exist is a client you lose.
+Most of those conversations started with the same questions — prices, how long a session takes, what's needed before a color service, the deposit — before reaching the one that matters: *is there a slot?*
+
+A generic chatbot wasn't enough. Answers had to match the salon's real prices and policies, and availability had to match the owner's real calendar. In booking, a wrong answer is worse than no answer: a client who shows up for a slot that doesn't exist is a client you lose.
 
 ## Architecture
 
-The system has two surfaces with a clear split. **The site answers the static questions** (prices, policies, what to expect). **The bot handles the dynamic ones** (availability and booking).
+Before choosing any tool, I mapped how the owner worked: how she talked to clients, how she managed her calendar, which questions always came up, how she closed a booking and what made the service feel like Hanami. The assistant was built to carry that voice, not a generic one.
 
-<Todo>Carlo — confirm whether the site links to or opens the bot directly, and how</Todo>
+The system has two surfaces with a clear split. **The site answers the static questions** (prices, policies, what to expect). **The bot handles the dynamic ones** (availability and booking). They meet in one place: every "book" button on the site opens an Instagram DM with the bot.
 
 ### HanamiBot
 
 ```mermaid
 flowchart TB
   accTitle: HanamiBot architecture
-  accDescr: Messages from WhatsApp and Instagram go to a router in n8n, which hands each one to a specialist agent. Agents answer from a knowledge base in Supabase with pgvector, and read availability from the salon's real calendar through a tool. The reply goes back on the same channel.
+  accDescr: Instagram DMs arrive through ManyChat into n8n. Voice notes and images are turned into text, and a short buffer merges messages sent in quick succession. A classifier labels the intent and a router hands the conversation to a specialist agent. The booking agent reads availability from a deterministic slot calculation over the owner's Google Calendar and answers questions from a knowledge base in Postgres with pgvector. The reply is rewritten in the salon's voice and sent back through ManyChat.
 
-  WA["WhatsApp"] --> R
-  IG["Instagram DM"] --> R
-  R{{"Router / orchestrator · n8n"}} --> AG["Specialist agents"]
-  AG --> KB[("Knowledge base<br/>Supabase · pgvector<br/>Gemini embeddings")]
-  AG --> CAL["Calendar tool<br/>real availability"]
-  KB --> OUT["Reply on the same channel"]
-  CAL --> OUT
+  IG["Instagram DM<br/>via ManyChat"] --> PRE["n8n · voice notes & images to text<br/>20 s buffer merges rapid messages"]
+  PRE --> CL{{"Intent classifier · Gemini"}}
+  CL --> BK["Booking agent<br/>book · reschedule · cancel · FAQs"]
+  CL --> CO["Color agent<br/>hair checklist · hands off to the owner"]
+  BK --> SL["Free-slot calculation<br/>code over Google Calendar"]
+  BK --> KB[("Knowledge base<br/>Postgres · pgvector")]
+  BK --> OUT["Reply in the salon's voice<br/>back through ManyChat"]
+  CO --> OUT
 
   classDef truth stroke-width:1.5px
-  class CAL truth
+  class SL truth
 ```
 
-- **Channels.** WhatsApp and Instagram DMs enter the same pipeline, so the salon has one set of rules instead of two.
-- **Router / orchestrator (n8n).** Decides which specialist agent handles each message.
-- **Specialist agents.** Each has a narrow job, which keeps prompts short and behavior predictable.
-- **Knowledge base (RAG).** Services, prices and policies live in Supabase with pgvector and Gemini embeddings, and are retrieved when answering — not baked into prompts.
-- **Calendar tool.** The only source of availability. See [the hard part](#the-hard-part) for why that's a rule, not a preference.
-
-<Todo>Carlo — which calendar or booking system the tool reads from and writes to</Todo>
+- **Channel.** Instagram DMs reach n8n through ManyChat, and replies go back the same way.
+- **Pre-processing.** Voice notes are transcribed and images described with Gemini, and a 20-second buffer merges messages that arrive in a burst, so the agent answers the whole thought instead of every fragment.
+- **Classifier and router.** A Gemini classifier labels each conversation's intent and a router hands it to one specialist agent.
+- **Booking agent.** Books, reschedules and cancels in the owner's Google Calendar, and answers questions about services, prices and policies from a knowledge base in Postgres with pgvector.
+- **Color agent.** Color services are high-ticket and need a consultation, so this agent collects a five-point checklist about the client's hair and saves it to the CRM with a summary and a direct link to the conversation — the owner never has to dig through messages. It never quotes a final price.
+- **Free-slot calculation.** The only source of availability. See [the hard part](#the-hard-part) for why that's code, not a prompt.
+- **Voice.** A last step rewrites each reply in the salon's tone before it's sent.
 
 ### The website
 
-hanamihairstudio.com is a one-page site built with semantic HTML, utility-first CSS and vanilla JavaScript — no framework.
+hanamihairstudio.com is a React and TypeScript single page built with Vite and Tailwind, **prerendered to static HTML** at build time, so the content is in the page before any JavaScript runs.
 
-- **Booking information up front.** Prices, session length, requirements for color services and the deposit policy are visible before anyone gets in touch. The goal: clients reach the DM or the bot already qualified, without repeating questions.
-- **Before/after gallery.** A lightweight carousel with WebP/AVIF images: social proof without giving up speed.
-- **Local SEO.** On-page optimization for the historic center of Zacatecas and Schema.org structured data (`HairSalon` / `LocalBusiness`) with geolocation and opening hours.
-- **Editorial visual tone**, aligned with the salon's natural, inclusive approach.
+- **Booking information up front.** Prices, session length, opening hours, payment methods and the deposit policy for color services are on the page before anyone gets in touch. The goal: clients reach the DM already qualified, without repeating questions.
+- **Every call to action opens the bot.** "Book" buttons are Instagram DM deep links, so the site hands off to the bot instead of to a contact form.
+- **Before/after gallery.** A scroll-snap carousel on mobile and a grid on desktop, with its animation skipped for visitors who prefer reduced motion.
+- **Local SEO.** Schema.org `HairSalon` structured data with the address, opening hours, price range and a catalog of services.
 
 ### QA and monitoring
 
-The bot shipped with three separate workflows around it, because agents fail quietly — a confident wrong answer doesn't throw an error.
+Agents fail quietly — a confident wrong answer doesn't throw an error — so the bot has workflows around it whose only job is to watch it.
 
-- **Logger** — keeps a record of the bot's conversations and decisions so any problem can be traced.
-- **Error Watchdog** — catches failed executions and raises an alert.
-- **QA Digest** — a periodic summary to review how the bot is behaving.
-
-<Todo>Carlo — confirm what each workflow records, where alerts go and how often the QA Digest runs</Todo>
+- **Error handler** (running). Every failed execution in the Hanami workflows is saved to an error log and raises an alert on Telegram.
+- **Per-turn telemetry.** Each turn records the intent, latency, the tools used and whether it fell back — including a flag for *mentioned a time without checking the calendar*. In the newest version it's written before the DM is sent, so a failed send can't erase the record.
+- **Nightly evaluator and daily digest** (built for the v3 cut-over, currently in staging). At 2 a.m. an LLM judge scores the day's conversations on tone, resolution, price hallucination, handoff and close; at 9 a.m. a digest with technical health, a per-agent breakdown and business numbers goes to Telegram.
 
 ## Key decisions & trade-offs
 
@@ -93,79 +94,89 @@ Static questions are answered on the site, where they're free and instant. The b
 
 </Decision>
 
-<Decision title="No framework for the site" tradeoff="No component system; fine for one page, but a larger site would need one.">
+<Decision title="Availability is computed by code, never by the model" tradeoff="Every change to the salon's hours is a code change, and the bot can't offer a slot when the calendar is unreachable.">
 
-Clients arrive from Instagram on their phones. Semantic HTML, utility-first CSS and vanilla JavaScript mean zero unnecessary JavaScript to download before the page is usable.
-
-</Decision>
-
-<Decision title="Availability comes from a tool, never from the model" tradeoff="Every availability answer costs a tool call, and the bot can't answer when the calendar is unreachable.">
-
-The model is good at conversation and bad at facts it can't see. Availability is always read from the real calendar through a tool; the model only phrases the answer.
+The model is good at conversation and bad at date arithmetic it can't see. Free slots are calculated deterministically and handed to the model as a closed list; the model only phrases the answer.
 
 </Decision>
 
-<Decision title="Router plus specialist agents instead of one large agent" tradeoff="More workflows to maintain, and the router becomes a critical piece.">
+<Decision title="A router plus specialist agents instead of one large agent" tradeoff="More workflows to maintain, and the classifier becomes a critical piece.">
 
-Each agent has a narrow job and a short prompt, which makes it easier to test, debug and change one behavior without breaking the others.
+Booking and color consultations need different rules — one closes a sale, the other must not quote a price. Separate agents with short prompts are easier to test and change without breaking each other.
 
 </Decision>
 
-<Decision title="QA and monitoring from day one" tradeoff="More workflows to build before launch.">
+<Decision title="Prerender the site to static HTML" tradeoff="A build step that renders every page, and the page still downloads React to become interactive.">
 
-Logger, Error Watchdog and QA Digest are separate workflows, not an afterthought. It's the difference between a demo and a system a business can depend on.
+Visitors arrive from Instagram on their phones, and search engines need to read prices and hours. Prerendering puts all the content in the HTML while keeping the site's React components.
+
+</Decision>
+
+<Decision title="Monitoring is part of the system, not an add-on" tradeoff="More workflows to build and keep running around a single bot.">
+
+Error alerts and per-turn telemetry are separate workflows with their own tables. It's the difference between a demo and a system a business can depend on.
 
 </Decision>
 
 ## The hard part
 
-**The agent invented appointment times.** It offered slots that sounded plausible but weren't in the calendar.
+**The agent offered appointment times that didn't exist.**
 
-**How it was detected.** <Todo>Carlo — how it was caught (client report, logs, QA Digest…)</Todo>
+**How it was detected.** The salon's owner reported it: the bot got the month wrong and offered slots that weren't actually free, then had to take them back.
 
-**Root cause.** The model could answer availability questions without consulting the calendar — and when it skipped the tool, it filled the gap with times that looked right. <Todo>Carlo — confirm and add the exact details</Todo>
+**Root cause.** The earlier version handed the model raw calendar events and asked it to work out the free slots itself — subtracting busy events from opening hours, handling the time zone, and even keeping to a month that was hard-coded in the prompt. That's arithmetic, and a language model does arithmetic by guessing what looks right.
 
-**The fix.** Availability now always comes from a tool call against the real calendar; the agent can't offer a slot the tool didn't return. <Todo>Carlo — exact details of the fix (prompt rules, forced tool call, validation step…)</Todo>
+**The fix.** The model no longer computes anything about time:
+
+1. A code step calculates the free 60-minute slots in the `America/Mexico_City` time zone: opening hours minus busy events, with a 24-hour minimum notice, over the next 14 days.
+2. The list goes into the prompt with exact ISO timestamps and today's date, under one rule: *you may only offer times that appear in this list.*
+3. To book, the agent copies the ISO value of the chosen slot into the booking tool — it never types a date on its own.
+
+The calculation later became a reusable sub-workflow — the single source of truth for availability — and telemetry now flags any turn that mentions a time without having checked the calendar.
 
 The lesson generalizes to any booking agent: the calendar is the source of truth, and the LLM is only the interface to it.
 
 ## Results
 
-### HanamiBot
+From the first week, the owner stopped worrying about her inbox, and the March calendar filled up in three days. The biggest change wasn't the time saved, though: the assistant always has time to ask the right question. Every haircut inquiry now gets offered a deep hydration treatment — which includes the cut and brings in about twice as much — something that never happened when forty messages were waiting.
+
+### Measured in the salon's CRM
 
 <Metrics>
-  <Metric label="Bookings made by the bot / month" value="[TODO: Carlo]" />
-  <Metric label="Conversations resolved without a human" value="[TODO: Carlo]" />
-  <Metric label="Response time" value="[TODO: Carlo]" />
-  <Metric label="Uptime" value="[TODO: Carlo]" />
+  <Metric label="Appointments booked by the bot" value="223" note="January 3 – August 21, 2026. 202 confirmed (91%), 17 cancelled." />
+  <Metric label="Color consultations pre-qualified" value="113" note="February – August 2026. Each with a summary and a link to the conversation." />
+</Metrics>
+
+### Business impact · the salon's estimates
+
+<Metrics>
+  <Metric label="Average ticket" value="+40–60%" note="From offering the hydration upgrade on every haircut booking." />
+  <Metric label="Monthly revenue" value="+32%" note="Estimated by the salon after the first two months." />
+  <Metric label="Hydration appointments per week" value="+40%" note="Same period." />
+  <Metric label="Manual time on customer messages" value="−85%" note="Sundays are hers again." />
 </Metrics>
 
 ### Website
 
 <Metrics>
-  <Metric label="PageSpeed Insights · mobile performance" value="[TODO: Carlo]" />
-  <Metric label="LCP · mobile" value="[TODO: Carlo]" />
-  <Metric label="Position in Google / Maps for local searches" value="[TODO: Carlo]" />
-  <Metric label="Repeated questions avoided (salon's estimate)" value="[TODO: Carlo]" />
+  <Metric label="Lighthouse SEO · Best Practices (mobile)" value="100 · 100" note="Lighthouse 13, 3 runs, September 2026." />
 </Metrics>
-
-<Todo>Carlo — screenshots or a short video of HanamiBot in action (a real, anonymized conversation)</Todo>
 
 ## Stack
 
 <Stack>
 
 - n8n
-- Supabase
+- Gemini (agents, classifier, embeddings)
+- ManyChat · Instagram
+- Google Calendar
 - PostgreSQL + pgvector
-- Gemini embeddings
-- WhatsApp
-- Instagram
-- HTML · CSS · JavaScript
+- Airtable
+- Telegram (alerts)
+- React · TypeScript · Vite
+- Tailwind CSS
 - Schema.org
 
 </Stack>
-
-<Todo>Carlo — LLM model(s) used by the agents</Todo>
 
 <CTA />

@@ -44,6 +44,7 @@ export default async function HomePage({ params }: Props) {
     "@type": "Person",
     name: isTodo(site.fullName) ? site.name : site.fullName,
     url: new URL(getPathname({ locale, href: "/" }), site.url).toString(),
+    ...(isTodo(site.photo) ? {} : { image: new URL(site.photo, site.url).toString() }),
     jobTitle: tMeta("jobTitle"),
     description: tMeta("description"),
     worksFor: { "@type": "Organization", name: site.company.name, url: site.company.url },
