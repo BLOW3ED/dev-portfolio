@@ -15,7 +15,7 @@ flow: ["DM de Instagram", "Router de intención", "Agentes especializados", "Age
 
 - **Qué es:** un sitio web (hanamihairstudio.com) y un asistente de reservas en Instagram (HanamiBot), diseñados como un solo sistema.
 - **Para quién:** Hanami Hair Studio, un salón en el Centro Histórico de Zacatecas y cliente real de Ápice.
-- **Resultado:** el bot atiende los DMs de Instagram del salón desde diciembre de 2025 y va en su tercera versión mayor — con la disponibilidad calculada por código, nunca adivinada por el modelo.
+- **Resultado:** 223 citas agendadas por el bot en menos de ocho meses, 91% confirmadas — y, según estimación del salón, un ticket promedio 40–60% más alto porque el asistente siempre ofrece la mejora que la dueña no tenía tiempo de ofrecer.
 
 </TLDR>
 
@@ -23,13 +23,21 @@ flow: ["DM de Instagram", "Router de intención", "Agentes especializados", "Age
 
 Hanami es un salón de belleza en el Centro Histórico de Zacatecas con una filosofía clara: estilismo natural e inclusivo. Sus clientes lo descubren en Instagram y llegan desde el celular — primero a ver, después a preguntar por DM.
 
+Su dueña, Eli, es la estilista y la única persona que opera el negocio. No puede partirse en dos.
+
 ## El problema
 
-La mayoría de las conversaciones empezaba con las mismas preguntas — precios, cuánto dura una sesión, qué se necesita antes de una coloración, el anticipo — antes de llegar a la que importa: *¿hay lugar?*
+Mientras tenía las manos ocupadas con una clienta, los mensajes se acumulaban en Instagram — veinte a la vez era lo normal. Al terminar la jornada empezaba otra: una o dos horas contestando dudas, buscando espacios en la agenda y coordinando fechas. Los domingos, su único día de descanso, se convertían en tres o cuatro horas de ponerse al corriente.
+
+El costo era real: clientas perdidas por tardar en responder, el mismo desgaste cada fin de semana y una agenda que solo se movía cuando ella la movía. Y con cuarenta mensajes sin contestar no hay tiempo de sugerir nada extra — cierras la venta lo más rápido que puedes y sigues.
+
+La mayoría de esas conversaciones empezaba con las mismas preguntas — precios, cuánto dura una sesión, qué se necesita antes de una coloración, el anticipo — antes de llegar a la que importa: *¿hay lugar?*
 
 Un chatbot genérico no bastaba. Las respuestas tenían que coincidir con los precios y políticas reales del salón, y la disponibilidad con la agenda real de la dueña. En reservas, una respuesta equivocada es peor que ninguna: alguien que llega a un horario que no existe es un cliente que se pierde.
 
 ## Arquitectura
+
+Antes de elegir cualquier herramienta, mapeé cómo trabajaba la dueña: cómo hablaba con sus clientas, cómo manejaba su agenda, qué preguntas le hacían siempre, cómo cerraba una cita y qué hacía que el trato se sintiera Hanami. El asistente se construyó para llevar esa voz, no una genérica.
 
 El sistema tiene dos superficies con una división clara. **El sitio resuelve las dudas estáticas** (precios, políticas, qué esperar). **El bot resuelve lo dinámico** (disponibilidad y agendar). Se encuentran en un punto: cada botón de "agendar" del sitio abre un DM de Instagram con el bot.
 
@@ -57,7 +65,7 @@ flowchart TB
 - **Preprocesamiento.** Las notas de voz se transcriben y las imágenes se describen con Gemini, y un buffer de 20 segundos junta los mensajes que llegan en ráfaga, para que el agente responda la idea completa y no cada fragmento.
 - **Clasificador y router.** Un clasificador con Gemini etiqueta la intención de cada conversación y un router se la pasa a un solo agente especializado.
 - **Agente de reservas.** Agenda, reagenda y cancela en el Google Calendar de la dueña, y responde dudas de servicios, precios y políticas desde una base de conocimiento en Postgres con pgvector.
-- **Agente de color.** Los servicios de color requieren valoración, así que este agente junta un checklist de cinco puntos sobre el cabello de la clienta, lo guarda y le pasa la conversación a la dueña. Nunca da un precio final.
+- **Agente de color.** Los servicios de color son de ticket alto y requieren valoración, así que este agente junta un checklist de cinco puntos sobre el cabello de la clienta y lo guarda en el CRM con un resumen y un enlace directo a la conversación — la dueña nunca tiene que buscar mensajes. Nunca da un precio final.
 - **Cálculo de horarios libres.** La única fuente de disponibilidad. En [la parte difícil](#la-parte-difícil) explico por qué es código y no un prompt.
 - **Voz.** Un último paso reescribe cada respuesta con el tono del salón antes de enviarla.
 
@@ -130,11 +138,28 @@ La lección aplica a cualquier agente de reservas: la agenda es la fuente de ver
 
 ## Resultados
 
+Desde la primera semana la dueña dejó de preocuparse por la bandeja de mensajes, y la agenda de marzo se llenó en tres días. Pero el cambio más grande no fue el tiempo ahorrado: el asistente siempre tiene tiempo de hacer la pregunta correcta. Cada consulta de corte ahora recibe la oferta de una hidratación profunda — que incluye el corte y deja alrededor del doble — algo que nunca pasaba cuando había cuarenta mensajes esperando.
+
+### Medido en el CRM del salón
+
 <Metrics>
-  <Metric label="Atendiendo los DMs de Instagram del salón desde" value="Dic 2025" note="Agenda, reagenda y cancela directo en la agenda de la dueña." />
-  <Metric label="Versiones mayores en producción" value="3" note="La tercera volvió determinista la disponibilidad y agregó SQL parametrizado y validación del payload." />
-  <Metric label="Sitio · Lighthouse SEO (móvil)" value="100 / 100" note="Lighthouse 13, 3 corridas, septiembre de 2026." />
-  <Metric label="Sitio · Lighthouse Best Practices (móvil)" value="100 / 100" note="Mismas corridas." />
+  <Metric label="Citas agendadas por el bot" value="223" note="3 de enero – 21 de agosto de 2026. 202 confirmadas (91%), 17 canceladas." />
+  <Metric label="Valoraciones de color pre-calificadas" value="113" note="Febrero – agosto de 2026. Cada una con resumen y enlace a la conversación." />
+</Metrics>
+
+### Impacto en el negocio · estimaciones del salón
+
+<Metrics>
+  <Metric label="Ticket promedio" value="+40–60%" note="Por ofrecer la hidratación en cada cita de corte." />
+  <Metric label="Ingresos mensuales" value="+32%" note="Estimado por el salón tras los primeros dos meses." />
+  <Metric label="Citas de hidratación por semana" value="+40%" note="Mismo periodo." />
+  <Metric label="Tiempo manual atendiendo mensajes" value="−85%" note="Los domingos vuelven a ser suyos." />
+</Metrics>
+
+### Sitio web
+
+<Metrics>
+  <Metric label="Lighthouse SEO · Best Practices (móvil)" value="100 · 100" note="Lighthouse 13, 3 corridas, septiembre de 2026." />
 </Metrics>
 
 ## Stack

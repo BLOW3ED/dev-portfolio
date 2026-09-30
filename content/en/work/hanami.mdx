@@ -15,7 +15,7 @@ flow: ["Instagram DM", "Intent router", "Specialist agents", "Calendar · RAG"]
 
 - **What:** a website (hanamihairstudio.com) and a booking assistant on Instagram (HanamiBot), designed as one system.
 - **For:** Hanami Hair Studio, a salon in the historic center of Zacatecas, Mexico, and a real Ápice client.
-- **Result:** the bot has handled the salon's Instagram DMs since December 2025, now in its third major version — with availability computed by code, never guessed by the model.
+- **Result:** 223 appointments booked by the bot in under eight months, 91% of them confirmed — and, by the salon's estimate, an average ticket 40–60% higher because the assistant always offers the upgrade the owner had no time to offer.
 
 </TLDR>
 
@@ -23,13 +23,21 @@ flow: ["Instagram DM", "Intent router", "Specialist agents", "Calendar · RAG"]
 
 Hanami is a hair salon in the historic center of Zacatecas with a clear philosophy: natural, inclusive styling. Clients discover it on Instagram and arrive on their phones — first to look, then to ask by DM.
 
+Its owner, Eli, is the stylist and the only person running the business. She can't split herself in two.
+
 ## The problem
 
-Most conversations started with the same questions — prices, how long a session takes, what's needed before a color service, the deposit — before reaching the one that matters: *is there a slot?*
+While her hands were busy with one client, messages piled up on Instagram — twenty at a time was normal. When the workday ended, a second one started: one or two hours answering questions, looking for gaps in the calendar and coordinating dates. Sundays, her only day off, turned into three or four hours of catching up.
+
+The cost was real: clients lost to slow replies, the same exhausting weekend every week, and a calendar that only moved when she moved it. And with forty unanswered messages, there's no time to suggest anything extra — you close the sale as fast as you can and move on.
+
+Most of those conversations started with the same questions — prices, how long a session takes, what's needed before a color service, the deposit — before reaching the one that matters: *is there a slot?*
 
 A generic chatbot wasn't enough. Answers had to match the salon's real prices and policies, and availability had to match the owner's real calendar. In booking, a wrong answer is worse than no answer: a client who shows up for a slot that doesn't exist is a client you lose.
 
 ## Architecture
+
+Before choosing any tool, I mapped how the owner worked: how she talked to clients, how she managed her calendar, which questions always came up, how she closed a booking and what made the service feel like Hanami. The assistant was built to carry that voice, not a generic one.
 
 The system has two surfaces with a clear split. **The site answers the static questions** (prices, policies, what to expect). **The bot handles the dynamic ones** (availability and booking). They meet in one place: every "book" button on the site opens an Instagram DM with the bot.
 
@@ -57,7 +65,7 @@ flowchart TB
 - **Pre-processing.** Voice notes are transcribed and images described with Gemini, and a 20-second buffer merges messages that arrive in a burst, so the agent answers the whole thought instead of every fragment.
 - **Classifier and router.** A Gemini classifier labels each conversation's intent and a router hands it to one specialist agent.
 - **Booking agent.** Books, reschedules and cancels in the owner's Google Calendar, and answers questions about services, prices and policies from a knowledge base in Postgres with pgvector.
-- **Color agent.** Color services need a consultation, so this agent collects a five-point checklist about the client's hair, saves it and hands the conversation to the owner. It never quotes a final price.
+- **Color agent.** Color services are high-ticket and need a consultation, so this agent collects a five-point checklist about the client's hair and saves it to the CRM with a summary and a direct link to the conversation — the owner never has to dig through messages. It never quotes a final price.
 - **Free-slot calculation.** The only source of availability. See [the hard part](#the-hard-part) for why that's code, not a prompt.
 - **Voice.** A last step rewrites each reply in the salon's tone before it's sent.
 
@@ -130,11 +138,28 @@ The lesson generalizes to any booking agent: the calendar is the source of truth
 
 ## Results
 
+From the first week, the owner stopped worrying about her inbox, and the March calendar filled up in three days. The biggest change wasn't the time saved, though: the assistant always has time to ask the right question. Every haircut inquiry now gets offered a deep hydration treatment — which includes the cut and brings in about twice as much — something that never happened when forty messages were waiting.
+
+### Measured in the salon's CRM
+
 <Metrics>
-  <Metric label="Handling the salon's Instagram DMs since" value="Dec 2025" note="Book, reschedule and cancel, directly in the owner's calendar." />
-  <Metric label="Major versions in production" value="3" note="The third made availability deterministic and added parameterized SQL and payload validation." />
-  <Metric label="Website · Lighthouse SEO (mobile)" value="100 / 100" note="Lighthouse 13, 3 runs, September 2026." />
-  <Metric label="Website · Lighthouse Best Practices (mobile)" value="100 / 100" note="Same runs." />
+  <Metric label="Appointments booked by the bot" value="223" note="January 3 – August 21, 2026. 202 confirmed (91%), 17 cancelled." />
+  <Metric label="Color consultations pre-qualified" value="113" note="February – August 2026. Each with a summary and a link to the conversation." />
+</Metrics>
+
+### Business impact · the salon's estimates
+
+<Metrics>
+  <Metric label="Average ticket" value="+40–60%" note="From offering the hydration upgrade on every haircut booking." />
+  <Metric label="Monthly revenue" value="+32%" note="Estimated by the salon after the first two months." />
+  <Metric label="Hydration appointments per week" value="+40%" note="Same period." />
+  <Metric label="Manual time on customer messages" value="−85%" note="Sundays are hers again." />
+</Metrics>
+
+### Website
+
+<Metrics>
+  <Metric label="Lighthouse SEO · Best Practices (mobile)" value="100 · 100" note="Lighthouse 13, 3 runs, September 2026." />
 </Metrics>
 
 ## Stack

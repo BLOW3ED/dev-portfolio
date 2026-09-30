@@ -101,7 +101,7 @@ None of these block a deploy; each one makes the site sell better.
 
 - [ ] Calendly/Cal.com link → `links.booking` in `src/config/site.ts` (buttons switch to "Book a call" on their own)
 - [ ] Umami Website ID → `UMAMI_WEBSITE_ID` in the server's `.env` ([docs/DEPLOY.md](docs/DEPLOY.md#analítica-umami-opcional))
-- [ ] HanamiBot numbers — bookings per month, conversations resolved without a human, response time. The bot's telemetry tables already collect them; query them and add `<Metric>`s with the date range in `note`
+- [ ] HanamiBot telemetry — conversations resolved without a human and response time. The bot's telemetry tables collect them (its Postgres was unreachable on 2026-09-30); add `<Metric>`s with the date range in `note`. Bookings after 2026-08-21 live in Corebase, not Airtable
 - [ ] HanamiBot screenshots or a short video (a real, anonymized conversation) → `<Figure>`
 - [ ] AutoJob: time from posting to alert, and real monthly LLM cost once the AI layer ships
 - [ ] Ápice: leads per division and contact-form conversion (Umami)
