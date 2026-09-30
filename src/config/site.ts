@@ -33,7 +33,7 @@ export const site = {
 
   links: {
     /** Calendly or Cal.com. Optional: without it, "Book a call" becomes "Email me". */
-    booking: "",
+    booking: "https://calendly.com/carlogarzamx",
     /** Public contact email. Required. */
     email: "carlogarzamx@gmail.com",
     /** Optional. */
