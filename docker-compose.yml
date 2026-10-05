@@ -46,9 +46,22 @@ services:
       - "traefik.http.routers.portfolio.middlewares=portfolio-hsts"
       - "traefik.http.middlewares.portfolio-hsts.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.portfolio-hsts.headers.stsIncludeSubdomains=true"
-      # Sin router para www: DOMAIN es un subdominio (carlo.apicehq.com). Si algún
-      # día el portafolio pasa a un dominio raíz propio, ver "Dominio raíz y www"
-      # en docs/DEPLOY.md.
+      # www y el dominio anterior → 301 a https://DOMAIN, conservando ruta y query.
+      # Un router por host: cada uno pide su propio certificado, así que si uno
+      # falla no tumba el del dominio principal.
+      - "traefik.http.routers.portfolio-www.rule=Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.portfolio-www.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-www.middlewares=portfolio-redirect"
+      # Dominio anterior (hasta oct 2026). Mantén su registro DNS mientras haya
+      # enlaces viejos circulando: sin él, el redirect deja de existir.
+      - "traefik.http.routers.portfolio-legacy.rule=Host(`carlo.apicehq.com`)"
+      - "traefik.http.routers.portfolio-legacy.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-legacy.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-legacy.middlewares=portfolio-redirect"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.regex=^https?://[^/]+(.*)"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.replacement=https://${DOMAIN}$${1}"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.permanent=true"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }

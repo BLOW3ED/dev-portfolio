@@ -2,7 +2,8 @@
 
 El sitio corre en el VPS de Hostinger (`srv1303035`, `76.13.106.210`) como un
 contenedor de Next.js detrás del **Traefik** que ya sirve `apicehq.com` y
-`stats.apicehq.com`. Dominio: **https://carlo.apicehq.com**.
+`stats.apicehq.com`. Dominio: **https://carlogarza.dev** (`www.carlogarza.dev` y el
+dominio anterior, `carlo.apicehq.com`, redirigen ahí con 301).
 
 ```
 visitante ──HTTPS──▶ Traefik (80/443, Let's Encrypt) ──▶ portfolio-web:3000 (Next.js standalone)
@@ -19,7 +20,9 @@ visitante ──HTTPS──▶ Traefik (80/443, Let's Encrypt) ──▶ portfol
 
 ## Lo que ya está hecho
 
-- Registro DNS `A carlo.apicehq.com → 76.13.106.210` (zona de `apicehq.com` en Hostinger).
+- DNS en Hostinger: `A carlogarza.dev → 76.13.106.210` y `CNAME www.carlogarza.dev → carlogarza.dev`
+  (zona de `carlogarza.dev`). Se conserva `A carlo.apicehq.com → 76.13.106.210`
+  (zona de `apicehq.com`) para que el redirect del dominio anterior siga vivo.
 - `docker-compose.yml` con las mismas labels de Traefik que `apicehq.com`
   (red `traefik-public`, entrypoint `websecure`, certresolver `letsencrypt`).
 
@@ -33,7 +36,7 @@ scp .env.example root@76.13.106.210:/var/www/portfolio/.env
 ./deploy.sh
 ```
 
-El `.env.example` ya trae `DOMAIN=carlo.apicehq.com`. El primer build tarda unos
+El `.env.example` ya trae `DOMAIN=carlogarza.dev`. El primer build tarda unos
 minutos; Traefik pide el certificado en cuanto el contenedor queda sano (~1 min).
 
 ## Deploys siguientes
@@ -53,7 +56,7 @@ Qué hace, en orden — si cualquier paso falla, se detiene:
 5. Reemplaza el contenedor y espera su `HEALTHCHECK` (el sitio queda fuera
    unos segundos en el cambio). Si el nuevo no arranca o no queda sano,
    **restaura la versión anterior solo**.
-6. Comprueba `https://carlo.apicehq.com/` y `/es`.
+6. Comprueba `https://carlogarza.dev/` y `/es`.
 
 Otros modos:
 
@@ -65,18 +68,19 @@ Otros modos:
 ## Verificar a mano
 
 ```bash
-curl -sI https://carlo.apicehq.com/ | grep -iE '^(HTTP|strict-transport|content-security|x-frame)'
+curl -sI https://carlogarza.dev/ | grep -iE '^(HTTP|strict-transport|content-security|x-frame)'
+curl -sI https://carlo.apicehq.com/es | grep -iE '^(HTTP|location)'   # 301 → https://carlogarza.dev/es
 ssh root@76.13.106.210 'cd /var/www/portfolio && docker compose ps && docker compose logs --tail 50 web'
 ```
 
 Espera `HTTP/2 200`, `strict-transport-security`, `content-security-policy` y
-`x-frame-options: DENY`.
+`x-frame-options: DENY`. Para `www` y el dominio anterior, `301` con su `location`.
 
 ## Analítica (Umami, opcional)
 
 Ya tienes Umami en `stats.apicehq.com`, sin cookies (no requiere banner):
 
-1. En el panel de Umami: *Settings → Websites → Add website* → `carlo.apicehq.com`.
+1. En el panel de Umami: *Settings → Websites → Add website* → `carlogarza.dev`.
 2. Copia el *Website ID* a `UMAMI_WEBSITE_ID` en `/var/www/portfolio/.env`.
 3. `./deploy.sh` (hay que reconstruir). La CSP permite el origen del script sola.
 
@@ -85,27 +89,23 @@ Ya tienes Umami en `stats.apicehq.com`, sin cookies (no requiere banner):
 En `src/config/site.ts`, pon la URL en `links.booking`, commit y `./deploy.sh`.
 Todos los botones pasan solos de "Email me" a "Book a call".
 
-## Dominio raíz y www
+## www y el dominio anterior
 
-Si algún día el portafolio se muda a un dominio propio (p. ej. `carlodavila.dev`):
+`docker-compose.yml` define tres routers de Traefik sobre el mismo contenedor:
 
-1. Registro `A` del dominio (y de `www`, si lo quieres) → `76.13.106.210`.
-2. `DOMAIN=` nuevo en el `.env` del VPS.
-3. Para redirigir `www` → raíz, agrega estas labels al servicio `web` en
-   `docker-compose.yml` (en un router aparte, para que si `www` falla no afecte
-   al certificado del dominio principal):
+| Router | Host | Qué hace |
+| --- | --- | --- |
+| `portfolio` | `DOMAIN` (`carlogarza.dev`) | sirve el sitio, con HSTS |
+| `portfolio-www` | `www.DOMAIN` | 301 a `https://DOMAIN` + la misma ruta |
+| `portfolio-legacy` | `carlo.apicehq.com` | 301 a `https://DOMAIN` + la misma ruta |
 
-   ```yaml
-   - "traefik.http.routers.portfolio-www.rule=Host(`www.${DOMAIN}`)"
-   - "traefik.http.routers.portfolio-www.entrypoints=websecure"
-   - "traefik.http.routers.portfolio-www.tls.certresolver=letsencrypt"
-   - "traefik.http.routers.portfolio-www.middlewares=portfolio-www-redirect"
-   - "traefik.http.middlewares.portfolio-www-redirect.redirectregex.regex=^https://www\\.(.+)"
-   - "traefik.http.middlewares.portfolio-www-redirect.redirectregex.replacement=https://$${1}"
-   - "traefik.http.middlewares.portfolio-www-redirect.redirectregex.permanent=true"
-   ```
+Cada uno pide su propio certificado, así que si uno falla (p. ej. falta su DNS)
+el dominio principal no se ve afectado.
 
-4. `./deploy.sh`.
+Para retirar el dominio anterior, cuando ya no haya enlaces viejos circulando:
+borra las cuatro labels `portfolio-legacy` del compose, haz deploy y luego
+elimina el registro `carlo` de la zona de `apicehq.com`. En ese orden: si quitas
+primero el DNS, Traefik reintentaría el certificado sin éxito.
 
 ## VPS sin Traefik
 
@@ -120,7 +120,7 @@ docker compose -f docker-compose.yml -f deploy/compose.caddy.yml up -d --build
 
 | Síntoma | Causa probable | Qué hacer |
 | --- | --- | --- |
-| `curl` da error de certificado | Traefik aún no obtiene el certificado, o el DNS no apunta al VPS | `dig +short carlo.apicehq.com` debe dar `76.13.106.210`; revisa `docker logs <traefik>` buscando `acme` |
+| `curl` da error de certificado | Traefik aún no obtiene el certificado, o el DNS no apunta al VPS | `dig +short carlogarza.dev` debe dar `76.13.106.210`; revisa `docker logs <traefik>` buscando `acme` |
 | `404 page not found` (texto plano) | Traefik no ve el contenedor | `docker compose ps` (¿healthy?) y `docker network inspect traefik-public` (¿está `portfolio-web-1`?) |
 | El build se detiene en `check-todos` | Quedó un `[TODO…` o `<Todo>` en el contenido | `npm run todos` en local lo lista |
 | El build muere sin mensaje (`Killed`) | Falta de RAM en el VPS durante `next build` | Agrega swap (`fallocate -l 2G /swapfile …`) y reintenta |

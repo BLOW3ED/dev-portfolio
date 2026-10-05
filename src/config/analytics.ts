@@ -5,7 +5,7 @@
  * prerendered, so the values are baked into the HTML):
  *
  *   Plausible (cloud or self-hosted)
- *     NEXT_PUBLIC_PLAUSIBLE_DOMAIN=carlo.dev
+ *     NEXT_PUBLIC_PLAUSIBLE_DOMAIN=carlogarza.dev
  *     NEXT_PUBLIC_PLAUSIBLE_SRC=https://plausible.io/js/script.js   (optional)
  *
  *   Umami (cloud or self-hosted)

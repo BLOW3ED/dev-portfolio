@@ -34,7 +34,7 @@ Ambos se sirven con el mismo formato: casos de estudio con **arquitectura + deci
 - **MDX** para los casos de estudio (`/content/{locale}/work/*.mdx`)
 - **next-intl** para i18n
 - **Mermaid** (render en build o cliente) para diagramas de arquitectura dentro de los MDX
-- **Deploy:** ~~Vercel~~ → VPS propio (Docker + Traefik) en `carlo.apicehq.com` — ver `docs/DEPLOY.md`
+- **Deploy:** ~~Vercel~~ → VPS propio (Docker + Traefik) en `carlogarza.dev` (antes `carlo.apicehq.com`) — ver `docs/DEPLOY.md`
 - **Analytics:** Umami propio o Plausible (sin cookies → sin banner)
 - Sin CMS por ahora. Carlo edita los MDX directo.
 

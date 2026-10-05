@@ -1,6 +1,6 @@
 # Carlo — portfolio
 
-Personal portfolio built from [`docs/PORTFOLIO_SPEC.md`](docs/PORTFOLIO_SPEC.md). Live at **https://carlo.apicehq.com** — English at `/`, Spanish at `/es`.
+Personal portfolio built from [`docs/PORTFOLIO_SPEC.md`](docs/PORTFOLIO_SPEC.md). Live at **https://carlogarza.dev** — English at `/`, Spanish at `/es`.
 
 **Stack:** Next.js 16 (App Router, standalone output) · TypeScript · Tailwind CSS 4 · MDX (`next-mdx-remote`) · next-intl · Mermaid · Docker + Traefik on a VPS · optional cookieless analytics (Umami or Plausible).
 
@@ -108,7 +108,7 @@ None of these block a deploy; each one makes the site sell better.
 
 ## Deploy (VPS)
 
-The site runs as a Docker container behind the VPS's existing Traefik, at `carlo.apicehq.com`. First time:
+The site runs as a Docker container behind the VPS's existing Traefik, at `carlogarza.dev` (`www` and the previous `carlo.apicehq.com` 301 to it). First time:
 
 ```bash
 ssh root@76.13.106.210 'mkdir -p /var/www/portfolio'
