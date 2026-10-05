@@ -1,68 +1,62 @@
 ---
 title: "AutoJob"
-summary: "The system I use to find work: it spots remote freelance opportunities early, scores them with AI and drafts a proposal — with every business rule in Postgres, not in the workflow tool."
-tags: ["Postgres", "n8n", "Claude API", "Supabase"]
+summary: "The system I use to find work: it pulls remote job listings every 15 minutes, triages them with rules that live in Postgres — not in the workflow tool — and alerts me on Telegram while they're still fresh."
+tags: ["Postgres", "n8n", "Supabase", "Telegram"]
 cover: ""
 order: 2
 status: "production"
 client: "internal"
-year: "[TODO: Carlo]"
-flow: ["Sources", "n8n · ingestion", "Postgres rules", "Claude · score & draft", "Telegram"]
+year: "2026"
+flow: ["Job feeds", "n8n · ingestion", "Postgres rules", "Telegram"]
 ---
 
 <TLDR>
 
-- **What:** an internal tool that detects remote freelance opportunities early, qualifies them with AI and writes a first draft of the proposal.
+- **What:** an internal tool that ingests remote job listings every 15 minutes, deduplicates and triages them in SQL, and alerts me on Telegram.
 - **For:** me — this is the system I use to find work.
-- **Result:** <Todo>Carlo — headline number, e.g. opportunities processed per week or time from posting to alert</Todo>
+- **Result:** 1,197 listings ingested in its first three days, 27 passed triage — and measuring those 27 exposed a gap that a new rule closed, cutting the daily digest from about 9 listings to about 3.
 
 </TLDR>
 
 ## Context
 
-In freelance work, timing matters: a good opportunity found late competes with everyone who found it first. Checking sources by hand is slow, and most listings aren't a fit.
+In remote work, timing matters: a good listing found late competes with everyone who found it first. Checking job boards by hand is slow, and most listings aren't a fit.
 
 ## The problem
 
 I needed three things that generic job alerts don't do together:
 
-1. **Find opportunities early**, as close as possible to when they're posted.
-2. **Filter by fit**, not by keyword — with a score I can trust and explain.
-3. **Get to a first draft fast**, so replying early doesn't mean replying badly.
-
-And it had to run for almost nothing: every service inside a free tier at the current volume.
+1. **Find listings early**, as close as possible to when they're posted.
+2. **Filter by fit**, not by keyword — with rules I can read, test and explain.
+3. **Alert without noise**: the listings worth acting on right now, individually; the rest, once a day.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
   accTitle: AutoJob architecture
-  accDescr: n8n fetches opportunities from the sources and writes raw payloads into Supabase. All business rules run as SQL functions in Postgres, including deduplication with a generated canonical hash. Claude Haiku scores opportunities, Claude Sonnet writes proposal drafts, and alerts go out through Telegram with rate limiting.
+  accDescr: Every 15 minutes n8n fetches listings from public remote-job feeds, normalizes them and hands the raw payloads to SQL functions in Supabase Postgres. The SQL functions deduplicate with a generated hash, triage each listing and decide whether it becomes an individual alert or a line in the daily digest. n8n delivers the messages, which SQL already wrote, to Telegram with rate limiting. AI scoring and proposal drafts are the next version and will only see listings that pass the SQL rules.
 
-  SRC["Opportunity sources"] --> N8N["n8n<br/>ingestion only"]
-  N8N -->|raw payloads| RAW[("Supabase · Postgres<br/>raw table")]
-  RAW --> SQL["SQL functions<br/>normalize · dedupe · rules"]
-  SQL --> SCORE["Claude Haiku<br/>fit score"]
-  SCORE --> DRAFT["Claude Sonnet<br/>proposal draft"]
-  DRAFT --> TG["Telegram alert<br/>rate-limited"]
+  SRC["Remote job feeds<br/>Himalayas · Jobicy · RemoteOK"] --> N8N["n8n · every 15 min<br/>fetch & normalize"]
+  N8N -->|raw payloads| DB[("Supabase · Postgres<br/>raw items → jobs")]
+  DB --> SQL["SQL functions<br/>dedupe · triage · geo · notify"]
+  SQL --> TG["Telegram<br/>alerts & daily digest"]
+  AI["AI scoring & drafts<br/>next version"] -.-> SQL
 
   classDef truth stroke-width:1.5px
   class SQL truth
 ```
 
-<Todo>Carlo — confirm the diagram matches production (what triggers scoring and drafting, and whether every opportunity is scored or only those that pass the SQL rules)</Todo>
-
-- **n8n — ingestion only.** It fetches the sources and writes raw payloads to Supabase. It never touches business logic.
-- **Postgres SQL functions.** Every rule lives here: normalization, deduplication, filtering. That's what makes a later move to a TypeScript core with Inngest possible without rewriting the rules.
-- **`canonical_hash`.** Deduplication runs on a hash that is a **generated column** in Postgres, so it's computed the same way for every row, no matter which workflow inserted it.
-- **Claude Haiku and Claude Sonnet.** Haiku scores, Sonnet drafts. The Batch API and prompt caching keep the cost down.
-- **Telegram.** Notifications with rate-limit control, so a burst of new listings doesn't turn into a burst of messages.
+- **n8n — transport, not logic.** It fetches the feeds, normalizes each item and calls SQL functions to store the run and its raw payloads. When it's time to notify, it delivers messages whose text SQL already wrote.
+- **Postgres SQL functions.** Every rule lives here: ingestion, deduplication, triage, the geo filter, what's worth an alert and what goes to the digest. Rules in SQL are versioned and tested as migrations, and they survive if the core ever moves out of n8n.
+- **`canonical_hash`.** Deduplication runs on a hash that is a **generated column** in Postgres, with a unique constraint, so it's computed the same way for every row no matter which workflow inserted it.
+- **Telegram, rate-limited.** One message at a time with a pause between them; on a `429` it waits the `retry_after` the API asks for and retries once. Caps per run — 3 individual alerts, 15 lines per digest — keep a burst of listings from becoming a burst of messages.
 
 ## Key decisions & trade-offs
 
-<Decision title="n8n only ingests; it never decides" tradeoff="Two places to look when debugging (the workflow and the database), and SQL is less approachable than a visual node.">
+<Decision title="n8n moves data; Postgres decides" tradeoff="Two places to look when debugging (the workflow and the database), and SQL is less approachable than a visual node.">
 
-The boundary is strict: n8n moves data in, Postgres decides what it means. Rules in SQL functions are versioned, testable and portable — and they'll survive the planned move to a TypeScript core with Inngest.
+The boundary is strict: n8n moves data in and messages out; Postgres decides what everything means. The rules are versioned, testable and portable — they don't depend on the workflow tool.
 
 </Decision>
 
@@ -72,15 +66,15 @@ Computing the hash in n8n meant every workflow had to compute it identically, fo
 
 </Decision>
 
-<Decision title="A small model to score, a larger one to write" tradeoff="Two prompts to maintain and evaluate instead of one.">
+<Decision title="Trust in a listing's date is declared per source" tradeoff="Adding a source means classifying how reliable its dates are before it goes live.">
 
-Scoring runs on every new opportunity, so it uses Claude Haiku. Writing a proposal needs better prose, so it uses Claude Sonnet. The Batch API and prompt caching cut the cost of both.
+Some feeds publish exact timestamps, others approximate ones, others none. Each source is configured as `exact`, `approx` or `unknown`, and only an exact, recent date can trigger an individual alert.
 
 </Decision>
 
-<Decision title="Temporal Cloud ruled out; everything in free tiers" tradeoff="Fewer durable-execution guarantees than a workflow engine — acceptable at this volume, revisited when it grows.">
+<Decision title="Rules first, AI where rules run out" tradeoff="Until the AI layer ships, triage is only as smart as its rules.">
 
-Temporal Cloud was too expensive for a tool at this stage. The whole system runs inside free tiers at the current volume.
+Rules are free, instant and explainable, and measuring them shows exactly where they fall short. The next version adds AI scoring and proposal drafts on top of them — only for listings that already passed the SQL filters, under a monthly budget cap.
 
 </Decision>
 
@@ -100,17 +94,31 @@ select coalesce('a', '') || '|' || coalesce(null, '') || '|' || coalesce('b', ''
 select coalesce('a', '') || '|' || coalesce('b', '') || '|' || coalesce(null, '');  -- a|b|
 ```
 
-In a deduplication key, that collision means a real opportunity gets discarded as a duplicate. The fix was an explicit `coalesce` per field instead of `concat_ws`.
+In a deduplication key, that collision means a real listing gets discarded as a duplicate. The generated column uses an explicit `coalesce` per field instead of `concat_ws`, then hashes the result with SHA-256.
 
-**`posted_at`.** Early detection depends on knowing when something was posted. A missing value can't be quietly replaced with the ingestion time: an old listing would look brand-new and trigger an alert. <Todo>Carlo — how NULL posted_at values are handled</Todo>
+**`posted_at`.** Early detection depends on knowing when something was posted. A missing value can't be quietly replaced with the ingestion time: an old listing would look brand-new and trigger an alert. So the two uses of the date are separated:
+
+```sql
+-- For the age filter, fall back to ingestion time only when the source's dates aren't trusted:
+effective_posted_at := case
+  when posted_at_confidence = 'unknown' then ingested_at
+  else coalesce(posted_at, ingested_at)
+end;
+
+-- An individual alert needs an exact, recent date. A NULL posted_at makes the
+-- comparison NULL, so it can never qualify: it falls through to the digest.
+when posted_at_confidence = 'exact' and posted_at > now() - max_age then 'high'
+```
 
 ## Results
 
+Measured on 2026-09-24, over every listing ingested from September 21 onward.
+
 <Metrics>
-  <Metric label="Opportunities processed / week" value="[TODO: Carlo]" />
-  <Metric label="Filtered out automatically" value="[TODO: Carlo]" />
-  <Metric label="Real LLM cost / month" value="[TODO: Carlo]" />
-  <Metric label="Time from posting to alert" value="[TODO: Carlo]" />
+  <Metric label="Listings ingested in 3 days" value="1,197" note="Himalayas 552 · Jobicy 539 · RemoteOK 106 — roughly 400 a day." />
+  <Metric label="Passed triage" value="27 (2.3%)" note="Everything else was filtered out automatically." />
+  <Metric label="Passes I couldn't take from Mexico" value="18 of 27" note="Region-restricted listings. The measurement led to a geo rule based on each feed's structured location." />
+  <Metric label="Daily digest, before → after the geo rule" value="~9 → ~3" note="Listings per day, on the same measured data." />
 </Metrics>
 
 ## Stack
@@ -120,10 +128,7 @@ In a deduplication key, that collision means a real opportunity gets discarded a
 - n8n
 - Supabase
 - PostgreSQL · SQL functions
-- Claude Haiku
-- Claude Sonnet
-- Anthropic Batch API
-- Prompt caching
+- pgcrypto (SHA-256)
 - Telegram Bot API
 
 </Stack>

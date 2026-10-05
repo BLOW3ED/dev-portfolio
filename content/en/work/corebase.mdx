@@ -1,22 +1,20 @@
 ---
 title: "Corebase"
-summary: "Architecture of a modular, multi-tenant SaaS platform in development — including 42 scattered permission checks consolidated into a single authorization layer."
-tags: ["TypeScript", "Next.js", "Supabase", "Multi-tenant"]
+summary: "Architecture of a multi-tenant platform in development — and how an owner check copied across 42 call sites became named rules that a linter won't let anyone scatter again."
+tags: ["TypeScript", "Next.js", "PostgreSQL · Drizzle", "Multi-tenant"]
 cover: ""
 order: 3
 status: "in-development"
 client: "internal"
-year: "[TODO: Carlo]"
-flow: ["Next.js app", "Authorization layer", "Workspaces", "Supabase"]
+year: "2026"
+flow: ["Next.js app", "Actor & guards", "Workspaces", "Postgres"]
 ---
-
-<Todo>Carlo — "Corebase" is a working name; decide whether to publish under it</Todo>
 
 <TLDR>
 
-- **What:** a modular, multi-tenant SaaS platform built with TypeScript, Next.js and Supabase. It's in development; this is an architecture case, not a product launch.
-- **For:** the layer that turns vertical agents into a product many businesses can use — starting with hair salons, with [Hanami](/work/hanami) as the proof.
-- **Result:** one codebase instead of two, and 42 scattered permission checks consolidated into a single authorization layer.
+- **What:** a modular, multi-tenant platform — bases, tables, records, views and pages with real-time co-editing — built with Next.js, TypeScript, Drizzle and self-hosted Postgres. It's in development; this is an architecture case, not a product launch.
+- **For:** the layer that turns vertical agents into a product many businesses can use. [Hanami](/work/hanami)'s appointments and color requests are already being moved onto it from Airtable.
+- **Result:** 18 server actions audited with none missing an authorization guard, and the owner bypass turned from hand-copied code into one named rule enforced by lint.
 
 </TLDR>
 
@@ -33,75 +31,76 @@ A custom deployment per client doesn't scale. The platform needs to keep each bu
 ```mermaid
 flowchart TB
   accTitle: Corebase architecture (simplified)
-  accDescr: The Next.js app renders a page-first interface. Every permission check goes through one authorization layer before reaching data in Supabase, which is organized by workspace, the tenant boundary. Vertical modules, starting with the salon agent, plug into the same pages.
+  accDescr: Every caller — a signed-in user, an API key, a share link or the system itself — is resolved to an actor. Services load the record, derive its workspace and ask the authorization core before touching data in Postgres through Drizzle. Workspaces are the tenant boundary. Pages are the universal container for bases, tables and views, and a separate real-time server handles co-editing.
 
-  UI["Next.js app<br/>page-first UI"] --> AUTHZ["Authorization layer<br/>one entry point for every permission check"]
-  MOD["Vertical modules<br/>starting with salons"] --> UI
-  AUTHZ --> DB[("Supabase · Postgres")]
+  CALLER["Callers<br/>users · API keys · share links · n8n · MCP"] --> APP["Next.js app<br/>page-first UI · services"]
+  APP --> AUTHZ["Authorization core<br/>actor + guards"]
+  AUTHZ --> DB[("PostgreSQL 17 · Drizzle")]
   DB --- WS["Workspaces<br/>tenant boundary"]
+  APP --> RT["Real-time server<br/>Yjs · Hocuspocus"]
+  APP --> FILES["Object storage<br/>MinIO"]
 
   classDef truth stroke-width:1.5px
   class AUTHZ truth
 ```
 
-- **Next.js app (TypeScript).** A page-first interface in the style of Notion.
-- **Authorization layer.** The single place where the platform decides who can do what. See [the hard part](#the-hard-part).
-- **Supabase.** Postgres and authentication.
-- **Workspaces.** The tenant boundary: each business works inside its own workspace.
-- **Vertical modules.** Industry-specific functionality, starting with salons.
-
-<Todo>Carlo — multi-tenant isolation details: Supabase RLS policies and the workspace schema</Todo>
-
-<Todo>Carlo — screenshots</Todo>
+- **Actors.** Every request is resolved to one actor: an agency admin, a client user with their workspace memberships, an API key, a share link or the system. Authorization rules are written once against that model.
+- **Authorization core.** Guards such as `requireWorkspaceAccess` and `requireStructureEditor` are the only way a service reaches data. See [the hard part](#the-hard-part).
+- **Workspaces.** The tenant boundary. Members have a role — viewer, editor or owner — and objects can carry grants that hide them or make them read-only.
+- **Page-first.** The page is the universal container: bases, tables and views live inside pages, and permissions are inherited down the page tree.
+- **Real-time and files.** Co-editing runs on a separate Yjs + Hocuspocus server; files go to MinIO.
+- **Integrations.** API keys, webhooks, an MCP server and a custom n8n node — the node is how Hanami's workflows write into it.
 
 ## Key decisions & trade-offs
 
-<Decision title="Consolidate: Corebase as the trunk, Synaptic as a frozen code donor" tradeoff="Useful code in Synaptic has to be ported by hand, and Synaptic no longer gets fixes.">
+<Decision title="Consolidate: Corebase as the only trunk" tradeoff="Useful code from the earlier project has to be ported by hand, and that project no longer gets fixes.">
 
-An earlier project, Synaptic, overlapped with Corebase. Instead of maintaining both, Corebase became the single trunk and Synaptic was frozen: code is taken from it when it's needed, and nothing new is built there.
+An earlier project, Synaptic, overlapped with Corebase. Instead of maintaining both, Corebase became the single trunk and Synaptic was frozen.
 
 </Decision>
 
 <Decision title="Page-first architecture, Notion-style" tradeoff="A generic page model is harder to design up front than a set of fixed screens.">
 
-Pages are the primary unit of the product. New functionality arrives as something that lives inside a page instead of a new, separate section of the app.
+Pages are the primary unit of the product. New functionality arrives as something that lives inside a page instead of a new, separate section of the app — and permissions follow the page tree instead of being configured per screen.
 
 </Decision>
 
-<Decision title="Multi-tenant isolation by workspace">
+<Decision title="Tenant isolation in the application, not in database policies" tradeoff="The database won't stop a query that skips the guards, so the guards themselves need audits, lint rules and tests.">
 
-<Todo>Carlo — how isolation is enforced (Supabase RLS, workspace schema) and why</Todo>
+Services derive the workspace from the record they load and check the actor against it before returning anything. One authorization model covers every kind of caller — including API keys and share links, which aren't database users.
 
 </Decision>
 
 <Decision title="Mobile deferred until there's revenue" tradeoff="No native app for now; mobile users get the web app.">
 
-A React Native / Expo app in the monorepo is planned, but it would double the surface to build and maintain. It waits until the platform has revenue — an explicit business decision, not an oversight.
+A React Native / Expo app would double the surface to build and maintain. It waits until the platform has revenue — an explicit business decision, not an oversight.
 
 </Decision>
 
 ## The hard part
 
-**Permissions were scattered across the codebase: 42 separate calls to `isOwner` and `isWorkspaceOwner`.**
+**One raw predicate was answering three different questions.** An audit of permissions found `isWorkspaceOwner` at 42 call sites across the codebase, and the owner bypass — "agency admin or workspace owner" — written by hand in six places, two of them in the UI.
 
 **Why that was a risk.**
 
-- Each feature decided on its own who could do what. Adding a feature meant remembering to add the right check — and nothing failed if you forgot.
-- Two helpers with overlapping meanings made it easy to use the wrong one: owner of the resource, or owner of the workspace?
-- In a multi-tenant platform, a missing check isn't a small bug: it's one business seeing another business's data.
-- Answering "who can do X?" meant reading 42 call sites.
+- Each call site was really asking one of three things: *is this person an end client subject to the portal's rules?*, *can this person operate the workspace?*, or *what access level does this object have for them?* The same function answered all three, so reading the code didn't tell you which one was meant.
+- A rule written on both sides of the client/server boundary drifts. The day it drifts, the UI promises a gate the server doesn't enforce.
+- In a multi-tenant platform, a wrong check isn't a small bug: it's one business seeing another business's data.
 
-**The final design.** Every check now goes through a single authorization layer. Features ask one question — *can this user perform this action here?* — and the answer comes from one place that can be read, reviewed and tested on its own.
+**The final design.**
 
-<Todo>Carlo — details of the final design (the layer's API, how roles are modeled, whether it's backed by RLS)</Todo>
+1. **Each question got a name** in the authorization core: `isPortalSubject`, `isWorkspaceAdmin` and `effectiveObjectLevelFor`. The six hand-written bypasses became `isWorkspaceAdmin`.
+2. **A lint rule restricts the raw predicate** to an allowlist. Adding a caller means editing that list and justifying it in the diff — the rule fails exactly when someone forgets, which is what the first refactor was missing.
+3. **An HTTP smoke test covers the one gate no service test could reach.** Its oracle is the rendered HTML, not the status code: the page streams, so the response is already `200` when access is denied — a test asserting `404` would pass with the gate wide open. It was checked by sabotaging the gate on purpose.
 
 ## Results
 
-Corebase is in development, so there are no production metrics yet.
+Corebase is in development, so there are no production metrics yet. What the refactor and the audit left in place:
 
 <Metrics>
-  <Metric label="Permission checks" value="42 → 1 layer" note="Scattered isOwner / isWorkspaceOwner calls consolidated into a single authorization layer." />
-  <Metric label="Active codebases" value="2 → 1" note="Synaptic frozen as a code donor; Corebase is the only trunk." />
+  <Metric label="Server actions without an authorization guard" value="0 of 18" note="From the permissions audit." />
+  <Metric label="Hand-written owner bypasses" value="6 → 1 named rule" note="Replaced by isWorkspaceAdmin; new direct uses of the raw predicate fail lint." />
+  <Metric label="Service smoke checks after the refactor" value="906 · 0 failures" note="Across 15 smoke suites, plus 19/19 on the new HTTP smoke test." />
 </Metrics>
 
 ## Stack
@@ -110,9 +109,14 @@ Corebase is in development, so there are no production metrics yet.
 
 - TypeScript
 - Next.js
-- Supabase
-- PostgreSQL
-- React Native · Expo (planned)
+- React
+- PostgreSQL 17
+- Drizzle ORM
+- Yjs · Hocuspocus
+- BlockNote
+- MinIO
+- Tailwind CSS
+- MCP
 
 </Stack>
 

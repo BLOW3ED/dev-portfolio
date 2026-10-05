@@ -1,0 +1,71 @@
+# Portafolio — servidor Next.js (standalone) detrás del Traefik del VPS.
+#
+# Vive en el VPS en /var/www/portfolio/ junto a su .env (ver .env.example).
+# Lo sube y lo levanta ./deploy.sh; a mano sería:
+#
+#   docker compose build && docker compose up -d
+#
+# Traefik descubre el servicio por labels (corre con exposedbydefault=false,
+# así que sin traefik.enable=true sería invisible) y emite el certificado con
+# el certresolver `letsencrypt` que ya existe en el host — igual que
+# apicehq.com y stats.apicehq.com.
+#
+# ¿VPS sin Traefik? Ver deploy/compose.caddy.yml.
+
+name: portfolio
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN:?Falta DOMAIN en .env}
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${PLAUSIBLE_DOMAIN:-}
+        NEXT_PUBLIC_PLAUSIBLE_SRC: ${PLAUSIBLE_SRC:-}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+        NEXT_PUBLIC_UMAMI_SRC: ${UMAMI_SRC:-}
+    image: portfolio-web:latest
+    restart: unless-stopped
+    init: true
+    # El servidor no escribe en disco salvo la caché de imágenes de Next.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:mode=1777
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=3000"
+      - "traefik.http.routers.portfolio.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.portfolio.entrypoints=websecure"
+      - "traefik.http.routers.portfolio.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio.middlewares=portfolio-hsts"
+      - "traefik.http.middlewares.portfolio-hsts.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.portfolio-hsts.headers.stsIncludeSubdomains=true"
+      # www y el dominio anterior → 301 a https://DOMAIN, conservando ruta y query.
+      # Un router por host: cada uno pide su propio certificado, así que si uno
+      # falla no tumba el del dominio principal.
+      - "traefik.http.routers.portfolio-www.rule=Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.portfolio-www.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-www.middlewares=portfolio-redirect"
+      # Dominio anterior (hasta oct 2026). Mantén su registro DNS mientras haya
+      # enlaces viejos circulando: sin él, el redirect deja de existir.
+      - "traefik.http.routers.portfolio-legacy.rule=Host(`carlo.apicehq.com`)"
+      - "traefik.http.routers.portfolio-legacy.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-legacy.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-legacy.middlewares=portfolio-redirect"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.regex=^https?://[^/]+(.*)"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.replacement=https://${DOMAIN}$${1}"
+      - "traefik.http.middlewares.portfolio-redirect.redirectregex.permanent=true"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  traefik-public:
+    external: true # red compartida que ya maneja el Traefik del host

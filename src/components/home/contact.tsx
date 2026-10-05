@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { site } from "@/config/site";
-import { bookingLink, contactLinks } from "@/lib/links";
+import { contactLinks, primaryCta } from "@/lib/links";
 import { ArrowIcon, ButtonLink } from "../button-link";
 import { Section } from "../section";
 import { withTodos } from "../todo";
 
 export async function Contact() {
-  const t = await getTranslations("contact");
-  const booking = bookingLink();
+  const [t, tCta] = await Promise.all([getTranslations("contact"), getTranslations("cta")]);
+  const cta = primaryCta();
 
   return (
     <Section id="contact" index="05" eyebrow={t("eyebrow")}>
@@ -18,12 +18,12 @@ export async function Contact() {
           </h3>
           <p className="max-w-xl text-lg text-fg-muted">{t("description")}</p>
           <div className="pt-2">
-            {booking.pending ? (
-              <p className="text-sm">{withTodos(site.links.booking)}</p>
+            {cta.kind === "contact" ? (
+              <p className="text-sm">{withTodos(site.links.email)}</p>
             ) : (
-              <ButtonLink href={booking.href} external>
-                {t("bookCall")}
-                <ArrowIcon direction="up-right" />
+              <ButtonLink href={cta.href} external={cta.external}>
+                {cta.kind === "email" ? tCta("emailMe") : t("bookCall")}
+                <ArrowIcon direction={cta.external ? "up-right" : "right"} />
               </ButtonLink>
             )}
           </div>
